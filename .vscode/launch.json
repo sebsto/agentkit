@@ -15,7 +15,8 @@
             "args": [],
             "cwd": "${workspaceFolder:AgentKit}/Example",
             "name": "Debug AgentClient",
-            "program": "${workspaceFolder:AgentKit}/Example/.build/debug/AgentClient"
+            "program": "${workspaceFolder:AgentKit}/Example/.build/debug/AgentClient",
+            "preLaunchTask": "swift: Build Debug AgentClient"
         },
         {
             "type": "swift",
