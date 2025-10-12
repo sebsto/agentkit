@@ -192,7 +192,7 @@ public struct ToolMacro: MemberMacro, ExtensionMacro {
         }
 
         let structName = structDecl.name.text
-        
+
         // Always generate internal extension to avoid public protocol conformance issues
         let extensionDecl: DeclSyntax = """
             extension \(raw: structName): ToolProtocol {}

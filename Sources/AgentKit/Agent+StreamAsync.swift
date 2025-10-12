@@ -4,7 +4,7 @@ extension Agent {
         let value: Value
 
         init(value: Value) {
-        // init(value: sending Value) {
+            // init(value: sending Value) {
             self.value = value
         }
     }
@@ -16,7 +16,7 @@ extension Agent {
     public func streamAsync(_ message: String) -> AsyncThrowingStream<AgentCallbackEvent, Error> {
 
         // wrap Self in a unchecked Sendable box
-        // we know the transfer is safe here because the mutating property of  Agent is 
+        // we know the transfer is safe here because the mutating property of  Agent is
         // History and it is protected by a Mutex
         let transferBox = UnsafeTransferBox(value: self)
         return AsyncThrowingStream(AgentCallbackEvent.self) { continuation in
