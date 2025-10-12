@@ -2,6 +2,7 @@ import BedrockService
 import Logging
 import MCPShared
 
+
 extension Agent {
 
     internal func runLoop(
@@ -55,7 +56,7 @@ extension Agent {
         repeat {
             logger.trace("Calling ConverseStream")
 
-            let result = try await invokeModelWithRetry(maxRetries: 3, logger: self.logger) {
+            let result = try await invokeModelWithRetry(logger: self.logger) {
                 attempt in
                 do {
                     return try await bedrock.converseStream(with: requestBuilder!)
@@ -190,37 +191,5 @@ extension Agent {
         if let callback {
             callback(.end)
         }
-    }
-
-    private func invokeModelWithRetry<T>(
-        maxRetries: Int,
-        logger: Logger,
-        closure: (Int) async throws -> T
-    ) async throws -> Result<T, Error> {
-
-        var result: T!
-        var retryCounter = 1
-        var lastError: Error? = nil
-        var success = false
-        while retryCounter <= maxRetries && !success {
-            do {
-                result = try await closure(retryCounter)
-                success = true
-            } catch {
-                logger.debug(
-                    "Retrying operation",
-                    metadata: ["error": "\(error)", "retryCounter": "\(retryCounter)"]
-                )
-                retryCounter += 1
-                lastError = error
-                //TODO: check if the error is retryable
-                //TODO: apply exponential backoff
-            }
-        }
-
-        guard retryCounter < maxRetries || success else {
-            return .failure(AgentError.maxRetriesExceeded(maxRetries, lastError))
-        }
-        return .success(result)
     }
 }

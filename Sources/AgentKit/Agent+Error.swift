@@ -5,6 +5,6 @@ extension Agent {
         case modelNotSupported(BedrockModel)
         case toolNotFound(String)
         case toolInputNotFound(JSON)
-        case maxRetriesExceeded(Int, Error?)
+        case maxRetriesExceeded(Error?)
     }
 }
