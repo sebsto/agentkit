@@ -70,46 +70,32 @@ public final class Agent {
         self.messages = messages
         self.model = model
 
-        var logger = logger ?? Logger(label: "AgentKit")
-        logger.logLevel =
-            ProcessInfo.processInfo.environment["LOG_LEVEL"].flatMap {
-                Logger.Level(rawValue: $0)
-            } ?? .info
-        self.logger = logger
+        // create a logger when none is given
+        if let logger {
+            self.logger = logger
+        } else {
+            var logger = Logger(label: "AgentKit")
+            logger.logLevel =
+                ProcessInfo.processInfo.environment["LOG_LEVEL"].flatMap {
+                    Logger.Level(rawValue: $0)
+                } ?? .info
+            self.logger = logger
+        }
 
         // create our bag of tools by combining the local and remote tools
         let remoteTools = try await Agent.collectTools(
             mcpTools: mcpTools,
             mcpConfig: mcpConfig,
             mcpConfigFile: mcpConfigFile,
-            logger: logger
+            logger: self.logger
         )
         self.tools = localTools + remoteTools
 
-        let bedrockAuth: BedrockAuthentication
-        switch auth {
-        case .tempCredentials(let path):
-            logger.warning(
-                "Using temporary credentials file",
-                metadata: ["path": .string(path)]
-            )
-            let tempCredentials = try Self.loadAWSCredentials(fromFile: path, logger: self.logger)
-            bedrockAuth = .static(
-                accessKey: tempCredentials.accessKeyId,
-                secretKey: tempCredentials.secretAccessKey,
-                sessionToken: tempCredentials.sessionToken
-            )
-        case .sso(let profileName):
-            bedrockAuth = .sso(profileName: profileName ?? "default")
-        case .profile(let profileName):
-            bedrockAuth = .profile(profileName: profileName)
-        default:
-            bedrockAuth = .default
-        }
+        let bedrockAuth = try Agent.makeBedrockAuth(auth: auth, logger: self.logger)
 
         self.bedrock = try await BedrockService(
             region: region,
-            logger: logger,
+            logger: self.logger,
             authentication: bedrockAuth
         )
 
@@ -120,7 +106,7 @@ public final class Agent {
                 bedrock: bedrock,
                 model: model,
                 tools: tools,
-                logger: logger,
+                logger: self.logger,
                 callback: callback
             )
         }
@@ -149,58 +135,6 @@ public final class Agent {
             logger: self.logger,
             callback: callback
         )
-    }
-
-    /// Authentication methods supported by the agent.
-    public enum AuthenticationMethod {
-        /// Use temporary credentials from a file path.
-        case tempCredentials(String)
-        /// Use a named AWS profile.
-        case profile(String)
-        /// Use AWS SSO with optional profile name.
-        case sso(String?)
-        /// Use default AWS credential chain.
-        case `default`
-    }
-
-    private enum CredentialsError: Error {
-        case fileNotFound(String)
-        case invalidData(String)
-        case decodingError(Error)
-        case credentialsExpired(Date, Date)  // Includes expiration date and current date for context
-    }
-    private static func loadAWSCredentials(fromFile path: String, logger: Logger) throws -> AWSTemporaryCredentials {
-        let fileManager = FileManager.default
-
-        // Check if file exists
-        guard fileManager.fileExists(atPath: path) else {
-            throw CredentialsError.fileNotFound("Credentials file not found at path: \(path)")
-        }
-
-        // Read file data
-        guard let data = fileManager.contents(atPath: path) else {
-            throw CredentialsError.invalidData("Could not read data from file: \(path)")
-        }
-
-        logger.info(
-            "Using temporary credentials file",
-            metadata: ["path": .string(path)]
-        )
-
-        // Decode JSON into AWSTemporaryCredentials
-        let credentials: AWSTemporaryCredentials
-        do {
-            let decoder = JSONDecoder()
-            credentials = try decoder.decode(AWSTemporaryCredentials.self, from: data)
-        } catch {
-            throw CredentialsError.decodingError(error)
-        }
-        // Verify credentials haven't expired
-        let currentDate = Date()
-        if currentDate >= credentials.expiration {
-            throw CredentialsError.credentialsExpired(credentials.expiration, currentDate)
-        }
-        return credentials
     }
 
     public func getHistory() -> History {
