@@ -26,10 +26,13 @@ extension Agent {
         /// Agent execution has ended.
         case end
 
+        // this allows users to print(event) in a callback function
         public var description: String {
             switch self {
             case .text(let content):
                 return content
+            case .message(_):
+                return "\n"
             default:
                 return ""
             }
