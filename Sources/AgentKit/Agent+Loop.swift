@@ -46,9 +46,7 @@ extension Agent {
         }
 
         // add the prompt to the history
-        messages.withLock {
-            $0.append(Message(prompt))
-        }
+        appendToHistory(Message(prompt))
 
         // loop on calling the model while the last message is NOT text
         // in other words, has long as we receive toolUse, call the tool, call the model again and iterate until the lats message is text.

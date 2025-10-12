@@ -22,7 +22,8 @@ public final class Agent {
     /// the list of tools this agent can use to answer questions
     public let tools: [any ToolProtocol]
     /// the history of messages
-    public let messages: Mutex<History>
+    // public let messages: Mutex<History>
+    public var messages: History
 
     private let bedrock: BedrockService
     internal let logger: Logger
@@ -65,7 +66,8 @@ public final class Agent {
     ) async throws {
 
         self.systemPrompt = systemPrompt
-        self.messages = Mutex(messages)
+        // self.messages = Mutex(messages)
+        self.messages = messages
         self.model = model
 
         var logger = logger ?? Logger(label: "AgentKit")
@@ -91,7 +93,7 @@ public final class Agent {
                 "Using temporary credentials file",
                 metadata: ["path": .string(path)]
             )
-            let tempCredentials = try Self.loadAWSCredentials(fromFile: path)
+            let tempCredentials = try Self.loadAWSCredentials(fromFile: path, logger: self.logger)
             bedrockAuth = .static(
                 accessKey: tempCredentials.accessKeyId,
                 secretKey: tempCredentials.secretAccessKey,
@@ -167,7 +169,7 @@ public final class Agent {
         case decodingError(Error)
         case credentialsExpired(Date, Date)  // Includes expiration date and current date for context
     }
-    private static func loadAWSCredentials(fromFile path: String) throws -> AWSTemporaryCredentials {
+    private static func loadAWSCredentials(fromFile path: String, logger: Logger) throws -> AWSTemporaryCredentials {
         let fileManager = FileManager.default
 
         // Check if file exists
@@ -179,6 +181,11 @@ public final class Agent {
         guard let data = fileManager.contents(atPath: path) else {
             throw CredentialsError.invalidData("Could not read data from file: \(path)")
         }
+
+        logger.info(
+            "Using temporary credentials file",
+            metadata: ["path": .string(path)]
+        )
 
         // Decode JSON into AWSTemporaryCredentials
         let credentials: AWSTemporaryCredentials
@@ -197,12 +204,15 @@ public final class Agent {
     }
 
     public func getHistory() -> History {
-        self.messages.withLock { $0 }
+        // self.messages.withLock { $0 }
+        self.messages
     }
     public func appendToHistory(_ message: Message) {
-        self.messages.withLock { $0.append(message) }
+        // self.messages.withLock { $0.append(message) }
+        self.messages.append(message)
     }
     public func lastMessageFromHistory() -> Message? {
-        self.messages.withLock { $0.last }
+        // self.messages.withLock { $0.last }
+        self.messages.last
     }
 }
