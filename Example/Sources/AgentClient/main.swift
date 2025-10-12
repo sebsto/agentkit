@@ -25,7 +25,7 @@ logger.logLevel = .debug
 
 /// Option 1. Just call the agent, it sends its ouput to stdout
 try await Agent(
-    "Tell me about Swift 6",
+    "Who are you?",
     // messages: generateLongHistory(),
     auth: .sso("pro"),
     region: .eucentral1,

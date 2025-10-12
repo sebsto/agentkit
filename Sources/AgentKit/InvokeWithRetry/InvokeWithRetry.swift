@@ -18,11 +18,11 @@ internal func invokeModelWithRetry<T>(
                 "Retrying operation",
                 metadata: ["error": "\(error)", "retryCounter": "\(retryCounter)"]
             )
-            retryCounter += 1
             lastError = error
             await strategy.delayBeforeRetry(attempt: retryCounter)
             //TODO: check if the error is retryable
         }
+        retryCounter += 1
     }
 
     guard lastError == nil else {

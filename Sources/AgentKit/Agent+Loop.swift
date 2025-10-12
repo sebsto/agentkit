@@ -54,11 +54,11 @@ extension Agent {
         // TODO : how to manage reasoning ?
         var lastMessageIsText = false
         repeat {
-            logger.trace("Calling ConverseStream")
 
             let result = try await invokeModelWithRetry(logger: self.logger) {
                 attempt in
                 do {
+                    logger.debug("Calling ConverseStream")
                     return try await bedrock.converseStream(with: requestBuilder!)
                 } catch let error as BedrockLibraryError {
                     if case .inputTooLong(let msg) = error {
@@ -95,7 +95,7 @@ extension Agent {
             }
 
             // read the stream of elements
-            logger.trace("Reading stream of elements")
+            logger.debug("Reading stream of elements")
             for try await element: ConverseStreamElement in reply.stream {
 
                 // read the stream of elements.  If this is a text content, print it.
