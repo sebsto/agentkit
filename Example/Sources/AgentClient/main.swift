@@ -1,5 +1,5 @@
 import AgentKit
-import Logging 
+import Logging
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -7,20 +7,41 @@ import FoundationEssentials
 import Foundation
 #endif
 
-// var logger = Logger(label: "AgentKit-Example")
-// logger.logLevel = .debug
+var logger = Logger(label: "AgentKit-Example")
+logger.logLevel = .debug
+
+func generateLongHistory(messageCount: Int = 1000) -> History {
+    let baseText = String(repeating: "This is a test message to create a long conversation history. ", count: 30)  // ~2KB per message
+
+    var history: History = []
+    for i in 0..<messageCount {
+        let userMessage = Message(from: .user, content: [.text("User message \(i): \(baseText)")])
+        let assistantMessage = Message(from: .assistant, content: [.text("Assistant response \(i): \(baseText)")])
+        history.append(userMessage)
+        history.append(assistantMessage)
+    }
+    return history
+}
 
 /// Option 1. Just call the agent, it sends its ouput to stdout
-try await Agent("Tell me about Swift 6", auth: .sso("pro"), region: .eucentral1) //, logger: logger)
-// or in two lines
-// let agent = try await Agent()
-// try await agent("Tell me about Swift 6")
+try await Agent(
+    "Tell me about Swift 6",
+    messages: generateLongHistory(),
+    auth: .sso("pro"),
+    region: .eucentral1,
+    logger: logger
+)
 
-/// Option 2.  Provide the agent with a callback function
-// let agent = try await Agent()
-// try await agent("Tell me about swift 6") { event in
-//     print(event, terminator: "")
-// }
+/// Test with long history
+// let agent = try await Agent(auth: .sso("pro"), region: .eucentral1)
+// agent.messages = generateLongHistory(messageCount: 150) // ~600KB of history
+// try await agent("Summarize our conversation")
+
+/// Option 2. Test conversation manager with long history
+// let conversationManager = SlidingWindowConversationManager(windowSize: 20)
+// let agent = try await Agent(auth: .sso("pro"), region: .eucentral1)
+// agent.messages = generateLongHistory(messageCount: 50)
+// try await agent("What can you tell me about our conversation?")
 
 /// Option 3.  Invoke `streamAsync(String)` to receive a stream of events
 // let agent = Agent()
@@ -49,10 +70,10 @@ try await Agent("Tell me about Swift 6", auth: .sso("pro"), region: .eucentral1)
 // print("This agent has \(agent.tools.count) tools")
 // agent.tools.forEach { tool in
 //     print("- \(tool.toolName)")
-// }	
+// }
 // try await agent(
 //     "What is the weather in Lille today? Give a one paragraph summary with key metrics. Do not use bullet points."
-// ) { event in 
+// ) { event in
 //     print(event, terminator: "")
 // }
 

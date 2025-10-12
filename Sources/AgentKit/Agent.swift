@@ -19,14 +19,24 @@ public final class Agent {
     public let model: BedrockModel
     /// The system prompt that defines the agent's behavior and context.
     public let systemPrompt: String
-    /// the list of tools this agent can use to answer questions
+    /// The list of tools this agent can use to answer questions
     public let tools: [any ToolProtocol]
-    /// the history of messages
-    // public let messages: Mutex<History>
+    /// The history of messages
     public var messages: History
 
+    /// The client API to the Bedrock service
     private let bedrock: BedrockService
-    internal let logger: Logger
+    /// The logger
+    private let logger: Logger
+
+    /// The conversation manager
+    package let conversationManager: ConversationManager
+    /// A counter of the tokens we sent to the model
+    package var inputTokenCount: Int = 0
+    /// A counter of the tokens we received from the model
+    package var outputTokenCount: Int = 0
+    /// The maximum number of retries in case of Bedrock API error
+    package let maxRetries: Int = 3
 
     /// Creates a new Agent instance with the specified configuration.
     ///
@@ -59,6 +69,7 @@ public final class Agent {
         mcpTools: [MCPClient] = [],
         mcpConfig: MCPServerConfiguration? = nil,
         mcpConfigFile: URL? = nil,
+        conversationManager: any ConversationManager = NullConversationManager(),
         auth: AuthenticationMethod = .default,
         region: Region = .useast1,
         logger: Logger? = nil,
@@ -66,9 +77,9 @@ public final class Agent {
     ) async throws {
 
         self.systemPrompt = systemPrompt
-        // self.messages = Mutex(messages)
-        self.messages = messages
         self.model = model
+        self.messages = messages
+        self.conversationManager = conversationManager
 
         // create a logger when none is given
         if let logger {
@@ -137,16 +148,17 @@ public final class Agent {
         )
     }
 
+    /// Three methods to access and to modify teh conversation Historys
     public func getHistory() -> History {
-        // self.messages.withLock { $0 }
         self.messages
     }
+    public func setHistory(history: History) {
+        self.messages = history
+    }
     public func appendToHistory(_ message: Message) {
-        // self.messages.withLock { $0.append(message) }
         self.messages.append(message)
     }
     public func lastMessageFromHistory() -> Message? {
-        // self.messages.withLock { $0.last }
         self.messages.last
     }
 }

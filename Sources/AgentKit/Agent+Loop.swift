@@ -54,8 +54,59 @@ extension Agent {
         var lastMessageIsText = false
         repeat {
             logger.trace("Calling ConverseStream")
-            let reply = try await bedrock.converseStream(with: requestBuilder!)
-            
+
+            //TODO: encapuslate the retry logic in a generic invokeWithRetry + closure function
+            var reply: ConverseReplyStream!
+            var retryCounter = 1
+            var lastError: Error? = nil
+            var success = false
+            while retryCounter <= maxRetries && !success {
+                do {
+                    reply = try await bedrock.converseStream(with: requestBuilder!)
+                    success = true
+                } catch let error as BedrockLibraryError {
+                    lastError = error
+                    retryCounter += 1
+                    if case .inputTooLong(let msg) = error {
+                        logger.debug(
+                            "Input too long, reducing context",
+                            metadata: [
+                                "error": "\(msg)", "history_size": "\(getHistory().count)",
+                                "retryCounter": "\(retryCounter-1)",
+                            ]
+                        )
+
+                        // compact the history
+                        let compactedHistory = try await self.conversationManager.reduceContext(history: self.messages)
+                        logger.debug("History compacted", metadata: ["history_size": "\(compactedHistory.count)"])
+                        self.setHistory(history: compactedHistory)
+
+                        // create a new request with the compacted history
+                        requestBuilder = try ConverseRequestBuilder(from: requestBuilder!)
+                            .withHistory(getHistory())
+                            .withPrompt(prompt)
+                    } else {
+                        logger.debug(
+                            "Retrying converse stream",
+                            metadata: ["error": "\(error)", "retryCounter": "\(retryCounter)"]
+                        )
+                    }
+
+                } catch {
+                    logger.debug(
+                        "Retrying converse stream",
+                        metadata: ["error": "\(error)", "retryCounter": "\(retryCounter)"]
+                    )
+                    retryCounter += 1
+                    lastError = error
+                    //TODO: check if the error is retryable
+                    //TODO: apply exponential backoff
+                }
+            }
+            guard retryCounter < maxRetries || success else {
+                throw AgentError.maxRetriesExceeded(maxRetries, lastError)
+            }
+
             // read the stream of elements
             logger.trace("Reading stream of elements")
             for try await element: ConverseStreamElement in reply.stream {
@@ -85,6 +136,15 @@ extension Agent {
                     }
                 case .metaData(let metadata):
                     logger.trace("Metadata", metadata: ["metadata": "\(metadata)"])
+
+                    // collect token usage for stats and cleanup
+                    if let inputTokens = metadata.usage?.inputTokens {
+                        self.inputTokenCount += inputTokens
+                    }
+                    if let outputTokens = metadata.usage?.outputTokens {
+                        self.outputTokenCount += outputTokens
+                    }
+
                     if let callback {
                         callback(.metaData(metadata))
                     }
@@ -135,6 +195,10 @@ extension Agent {
                     lastMessageIsText = false
                 }
             }
+
+            // compact the history, according to the defined strategy
+            self.messages = try await self.conversationManager.applyManagement(history: messages)
+
         } while lastMessageIsText == false
 
         if let callback {

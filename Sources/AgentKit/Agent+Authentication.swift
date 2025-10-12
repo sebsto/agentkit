@@ -7,10 +7,10 @@ import FoundationEssentials
 import Foundation
 #endif
 
-public extension Agent {
+extension Agent {
 
     /// Authentication methods supported by the agent.
-    enum AuthenticationMethod {
+    public enum AuthenticationMethod {
         /// Use temporary credentials from a file path.
         case tempCredentials(String)
         /// Use a named AWS profile.
@@ -20,7 +20,7 @@ public extension Agent {
         /// Use default AWS credential chain.
         case `default`
     }
-    
+
     // static because it is used by the initializer
     static package func makeBedrockAuth(auth: AuthenticationMethod, logger: Logger) throws -> BedrockAuthentication {
         let bedrockAuth: BedrockAuthentication
