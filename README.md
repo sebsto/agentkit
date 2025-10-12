@@ -1,62 +1,109 @@
-# MCPSwift
+# AgentKit
 
-A high-level Swift framework for building Model Context Protocol (MCP) servers with a simplified API.
+A Swift framework for building AI agents with Amazon Bedrock and Model Context Protocol (MCP) support. AgentKit simplifies creating conversational AI agents that can use tools and integrate with MCP servers.
 
 ## Overview
 
-MCPSwift provides `MCPServerKit`, a high-level and easy-to-use API built on top of [the official MCP Swift SDK](https://github.com/modelcontextprotocol/swift-sdk). This framework simplifies the process of creating MCP-compatible tools and servers in Swift.
+AgentKit provides a high-level API for building AI agents that can:
+- Have conversations using Amazon Bedrock models
+- Use local tools to perform actions
+- Connect to remote MCP servers for extended capabilities
+- Handle authentication and configuration seamlessly
 
-Key features:
-- **Swift Macros**: Automatic tool schema generation and simplified server setup
-- Simplified tool creation and registration
-- Standardized error handling
-- Streamlined server setup and communication
-- Type-safe API for building MCP tools
-- Support for heterogeneous tools with different input/output types
-- Resource management for sharing files and data with LLMs
-- Strongly-typed MIME type handling
+## Requirements
 
-The project includes examples demonstrating both macro-based and traditional approaches to implementing MCP servers.
+- macOS 15 or later
+- Swift 6.2 or later
+- AWS credentials configured
 
-## Quick Start with Macros (Recommended)
+## Installation
 
-MCPSwift provides powerful Swift macros that dramatically reduce boilerplate code and automatically generate JSON schemas from your Swift types.
-
-### Creating Tools with Macros
-
-#### Basic Tool with Simple Types
+Add AgentKit to your Swift package:
 
 ```swift
-import MCPServerKit
-import ToolMacro
+dependencies: [
+    .package(url: "https://github.com/sebsto/AgentKit", from: "1.0.0")
+]
+```
 
-@Tool(name: "greet", description: "Greet someone by name")
-struct GreetTool: ToolProtocol {
-    /// Greet a person
-    /// - Parameter input: The name of the person to greet
-    func handle(input: String) async throws -> String {
-        return "Hello, \(input)!"
+## 1. Simple Agent
+
+Create a basic conversational agent with minimal setup:
+
+```swift
+import AgentKit
+
+// Simple one-liner - agent responds to stdout
+try await Agent("Tell me about Swift 6")
+
+// Two-step approach
+let agent = try await Agent()
+try await agent("Tell me about Swift 6")
+
+// With custom authentication and region
+try await Agent(
+    "Tell me about Swift 6", 
+    auth: .sso("my-profile"), 
+    region: .eucentral1
+)
+
+// With callback for custom output handling
+let agent = try await Agent()
+try await agent("Tell me about Swift 6") { event in
+    print(event, terminator: "")
+}
+
+// Streaming approach
+let agent = try await Agent()
+for try await event in agent.streamAsync("Tell me about Swift 6") {
+    switch event {
+    case .text(let text):
+        print(text, terminator: "")
+    default:
+        break
     }
 }
 ```
 
-#### Advanced Tool with Custom Struct
+## 2. Tools
+
+Create tools that agents can use to perform specific actions. Tools are defined using the `@Tool` macro.
+
+**Important**: Swift DocC comments on the `handle` function parameters and `@SchemaDefinition` struct properties are crucial - they become the tool descriptions that AI models use to understand how to invoke your tools correctly.
+
+### Simple String Tool
 
 ```swift
-import MCPServerKit
-import ToolMacro
+import AgentKit
 
-// Define input structure with automatic schema generation
+@Tool(
+    name: "weather",
+    description: "Get detailed weather information for a city."
+)
+struct WeatherTool {
+    /// Get weather information for a specific city
+    /// - Parameter input: The city name to get the weather for
+    func handle(input city: String) async throws -> String {
+        let weatherURL = "http://wttr.in/\(city)?format=j1"
+        let url = URL(string: weatherURL)!
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return String(decoding: data, as: UTF8.self)
+    }
+}
+```
+
+### Complex Structured Tool
+
+```swift
+import AgentKit
+
 @SchemaDefinition
 struct CalculatorInput: Codable {
-    /// First number for the calculation
+    /// The first operand of the operation
     let a: Double
-    
-    /// Second number for the calculation  
+    /// The second operand of the operation
     let b: Double
-    
-    /// Operation to perform (add, subtract, multiply, divide)
-    /// Valid values: "add", "subtract", "multiply", "divide"
+    /// The arithmetic operation: "add", "subtract", "multiply", "divide"
     let operation: String
 }
 
@@ -65,12 +112,7 @@ struct CalculatorInput: Codable {
     description: "Performs basic arithmetic operations",
     schema: CalculatorInput.self
 )
-struct CalculatorTool: ToolProtocol {
-    typealias Input = CalculatorInput
-    typealias Output = Double
-    
-    /// Perform arithmetic calculation
-    /// - Parameter input: The calculation parameters
+struct CalculatorTool {
     func handle(input: CalculatorInput) async throws -> Double {
         switch input.operation {
         case "add":
@@ -91,371 +133,333 @@ struct CalculatorTool: ToolProtocol {
 }
 ```
 
-### Creating Servers with Macros
-
-#### Simple Server without Prompts
+### Currency Exchange Tool
 
 ```swift
-import MCPServerKit
-import ServerMacro
+import AgentKit
 
-@Server(
-    name: "CalculatorServer",
-    version: "1.0.0",
-    description: "A server that performs calculations",
-    tools: [
-        GreetTool(),
-        CalculatorTool()
-    ],
-    type: .stdio
+@SchemaDefinition
+struct FXRatesInput: Codable {
+    /// The source currency code (e.g., USD, EUR, GBP)
+    let sourceCurrency: String
+    /// The target currency code (e.g., USD, EUR, GBP)
+    let targetCurrency: String
+}
+
+@Tool(
+    name: "foreign_exchange_rates",
+    description: "Get current foreign exchange rates between two currencies",
+    schema: FXRatesInput.self
 )
+struct FXRateTool {
+    func handle(input: FXRatesInput) async throws -> String {
+        let fxURL = "https://hexarate.paikama.co/api/rates/latest/\(input.sourceCurrency)?target=\(input.targetCurrency)"
+        let url = URL(string: fxURL)!
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return String(decoding: data, as: UTF8.self)
+    }
+}
+```
+
+## 3. Agent + Tools
+
+Combine agents with local tools for enhanced capabilities:
+
+```swift
+import AgentKit
+
+// Create agent with multiple tools
+let agent = try await Agent(tools: [
+    WeatherTool(), 
+    FXRateTool(), 
+    CalculatorTool()
+])
+
+// Use the tools through natural conversation
+try await agent("What is the weather in Paris today?")
+try await agent("How much is 100 USD in EUR?")
+try await agent("What is 15 * 23?")
+```
+
+## 4. Exposing Tools as MCP Server
+
+Share your tools with other applications by creating MCP servers:
+
+### STDIO Server
+
+```swift
+import AgentKit
+
 @main
-struct CalculatorServer {}
-
-// The macro automatically generates:
-// public static func main() async throws {
-//     let server = MCPServer.create(
-//         name: "CalculatorServer",
-//         version: "1.0.0",
-//         tools: [GreetTool(), CalculatorTool()]
-//     )
-//     try await server.startStdioServer()
-// }
+struct MyMCPServer {
+    static func main() async throws {
+        try await MCPServer.withMCPServer(
+            name: "MyToolServer",
+            version: "1.0.0",
+            transport: .stdio,
+            tools: [
+                WeatherTool(),
+                CalculatorTool(),
+                FXRateTool()
+            ]
+        ) { server in
+            try await server.run()
+        }
+    }
+}
 ```
 
-#### Server with Tools and Prompts
+### HTTP Server
 
 ```swift
-import MCPServerKit
-import ServerMacro
+import AgentKit
 
-// Create prompts for your server
-let greetingPrompt = try! MCPPrompt.build { builder in
-    builder.name = "friendly-greeting"
-    builder.description = "Generate a friendly greeting"
-    builder.text("Create a warm, friendly greeting for {name} in {language}")
-    builder.parameter("name", description: "The person's name")
-    builder.parameter("language", description: "The language for the greeting")
-}
-
-let calculationPrompt = try! MCPPrompt.build { builder in
-    builder.name = "math-explanation"
-    builder.description = "Explain a mathematical calculation"
-    builder.text("Explain how to calculate {operation} of {a} and {b}")
-    builder.parameter("operation", description: "The mathematical operation")
-    builder.parameter("a", description: "First number")
-    builder.parameter("b", description: "Second number")
-}
-
-@Server(
-    name: "MultiToolServer",
-    version: "1.0.0",
-    description: "A server with tools and prompts",
-    tools: [
-        GreetTool(),
-        CalculatorTool()
-    ],
-    prompts: [greetingPrompt, calculationPrompt],
-    type: .stdio
-)
 @main
-struct MultiToolServer {}
-
-// The macro automatically generates:
-// public static func main() async throws {
-//     let server = MCPServer.create(
-//         name: "MultiToolServer",
-//         version: "1.0.0",
-//         tools: [GreetTool(), CalculatorTool()],
-//         prompts: [greetingPrompt, calculationPrompt]
-//     )
-//     try await server.startStdioServer()
-// }
-```
-
-### Benefits of Using Macros
-
-- **Automatic Schema Generation**: JSON schemas are generated from your Swift types and DocC comments
-- **Type Safety**: Compile-time validation of your tool definitions
-- **Reduced Boilerplate**: No need to manually write JSON schemas or server setup code
-- **Documentation Integration**: DocC comments become parameter descriptions in the schema
-- **Easy Server Setup**: Single macro generates complete server with main function
-
-## MCPServerKit (Traditional Approach)
-
-MCPServerKit is the core library that abstracts away the complexity of the MCP protocol, allowing developers to focus on building their tools rather than managing protocol details.
-
-### Key Components
-
-- **ToolProtocol**: Generic protocol defining the interface for MCP tools with associated Input and Output types
-- **MCPTool**: A default abstraction for defining tools with schemas and handlers, supporting type-safe input and output
-- **MCPServer**: Unified server implementation that supports tools, prompts, and resources
-- **MCPResource**: Type-safe wrapper for MCP resources with support for text and binary data
-- **MCPServerError**: Standardized error handling for MCP servers
-
-### Benefits
-
-- Reduces boilerplate code when implementing MCP tools and resources
-- Provides a consistent pattern for tool development
-- Handles the complexities of MCP communication
-- Makes it easy to create and test new tools
-- Allows tools with different input/output types to coexist in the same server
-- Simplifies resource management for sharing files and data with LLMs
-
-## Requirements
-
-- macOS 15 or later
-- Swift 6.2 or later
-- Xcode 16 or later (recommended for development)
-
-## Installation
-
-Clone the repository:
-
-```bash
-git clone <repository-url>
-cd MCPSwift
-```
-
-Build the project:
-
-```bash
-swift build
-```
-
-## Project Structure
-
-- **MCPServerKit**: The core library for building MCP servers and tools
-- **ServerMacro**: Swift macros for automatic server generation
-- **ToolMacro**: Swift macros for automatic tool schema generation
-- **MCPShared**: Shared types and protocols for macro system
-- **Example**: Example implementations demonstrating both macro and traditional approaches
-- **Tests**: Unit tests for the server components
-
-## Using MCPServerKit (Traditional Approach)
-
-### Creating a Tool
-
-```swift
-import MCPServerKit
-
-// Define your tool's schema
-let myToolSchema = """
-{
-    "type": "object",
-    "properties": {
-      "parameter_name": {
-        "description": "Description of the parameter",
-        "type": "string"
-      }
-    },
-    "required": [
-      "parameter_name"
-    ]
+struct MyHTTPServer {
+    static func main() async throws {
+        try await MCPServer.withMCPServer(
+            name: "MyToolServer",
+            version: "1.0.0",
+            transport: .http(port: 8080),
+            tools: [
+                WeatherTool(),
+                CalculatorTool(),
+                FXRateTool()
+            ]
+        ) { server in
+            try await server.run()
+        }
+    }
 }
-"""
+```
 
-// Create your tool with a handler function and converter
-let myTool = MCPTool<String, String>(
-    name: "tool_name",
-    description: "Description of what your tool does",
-    inputSchema: myToolSchema,
-    converter: { params in
-        // Convert the input parameters to the expected type
-        try MCPTool<String, String>.extractParameter(params, name: "parameter_name")
-    },
-    body: { (input: String) async throws -> String in
-        // Process the input and return a result
-        return "Processed: \(input)"
+### Server with Prompts
+
+```swift
+import AgentKit
+
+let weatherPrompt = try! MCPPrompt.build { builder in
+    builder.name = "current-weather"
+    builder.description = "Get current weather for a city"
+    builder.text("What is the weather today in {city}?")
+    builder.parameter("city", description: "The name of the city")
+}
+
+@main
+struct MyServerWithPrompts {
+    static func main() async throws {
+        try await MCPServer.withMCPServer(
+            name: "MyToolServer",
+            version: "1.0.0",
+            transport: .stdio,
+            tools: [WeatherTool()],
+            prompts: [weatherPrompt]
+        ) { server in
+            try await server.run()
+        }
     }
-)
+}
 ```
 
-### Creating Resources
+## 5. Agent + MCP Servers
 
-Resources allow you to share files, data, and other content with LLMs through the MCP protocol:
+Connect agents to remote MCP servers for extended capabilities:
 
-```swift
-import MCPServerKit
+### Using Configuration File
 
-// Create text resources with strongly-typed MIME types
-let documentationResource = MCPResource.text(
-    name: "API Documentation",
-    uri: "docs://api-reference",
-    content: "# API Reference\n\nThis document describes...",
-    mimeType: .markdown
-)
-
-// Create binary resources
-let logoResource = MCPResource.binary(
-    name: "Logo",
-    uri: "images://logo",
-    data: imageData,
-    mimeType: .png
-)
-
-// Create resources from files (automatically detects if text or binary)
-let configResource = try MCPResource.file(
-    name: "Configuration",
-    uri: "config://settings",
-    filePath: "/path/to/config.json"
-)
-
-// Create a resource registry
-let registry = MCPResourceRegistry()
-registry.add(documentationResource)
-       .add(logoResource)
-       .add(configResource)
-```
-
-### Setting Up a Server with Tools
-
-```swift
-import MCPServerKit
-
-// Create the server with tools
-let server = MCPServer.create(
-    name: "MyMCPServer",
-    version: "1.0.0",
-    tools: myTool1, myTool2, myTool3
-)
-
-// Start the server
-try await server.startStdioServer()
-```
-
-### Setting Up a Server with Resources
-
-```swift
-import MCPServerKit
-
-// Create the server with resources
-let server = MCPServer.create(
-    name: "ResourceServer",
-    version: "1.0.0",
-    resources: registry
-)
-
-// Start the server
-try await server.startStdioServer()
-```
-
-### Setting Up a Server with Both Tools and Resources
-
-```swift
-import MCPServerKit
-
-// Create the server with both tools and resources
-let server = MCPServer.create(
-    name: "FullServer",
-    version: "1.0.0",
-    tools: [weatherTool, calculatorTool],
-    resources: registry
-)
-
-// Start the server
-try await server.startStdioServer()
-```
-
-### Adding Resources to an Existing Server
-
-```swift
-import MCPServerKit
-
-// Create a server
-let server = MCPServer.create(
-    name: "MyServer",
-    version: "1.0.0",
-    tools: [myTool]
-)
-
-// Add resources to the server
-let serverWithResources = server.registerResources(registry)
-
-// Start the server
-try await serverWithResources.startStdioServer()
-```
-
-## Example: Weather Tool with Resources
-
-```swift
-// Weather tool
-let weatherTool = MCPTool<String, String>(
-    name: "weather",
-    description: "Get weather information for a city",
-    inputSchema: """
-    {
-        "type": "object",
-        "properties": {
-            "city": {
-                "type": "string",
-                "description": "The city to get weather for"
-            }
-        },
-        "required": ["city"]
-    }
-    """,
-    converter: { params in
-        try MCPTool<String, String>.extractParameter(params, name: "city")
-    },
-    body: { city in
-        // Implementation would fetch weather data
-        return "Weather for \(city): Sunny, 72°F"
-    }
-)
-
-// Weather resources
-let registry = MCPResourceRegistry()
-registry.add(
-    MCPResource.text(
-        name: "Weather API Documentation",
-        uri: "docs://weather-api",
-        content: "# Weather API\n\nThis API provides weather information...",
-        mimeType: .markdown
-    )
-)
-
-// Create server with both tool and resources
-let server = MCPServer.create(
-    name: "WeatherServer",
-    version: "1.0.0",
-    tools: [weatherTool],
-    resources: registry
-)
-
-// Start the server
-try await server.startStdioServer()
-```
-
-## Integrating with MCP Clients
-
-Servers built with MCPServerKit can be used with any MCP-compatible client, including:
-
-- [Amazon Q Developer CLI](https://docs.aws.amazon.com/amazonq/latest/qdeveloper-ug/command-line-installing.html)
-- [Claude Desktop App](https://claude.ai/download)
-- Other AI services that support the Model Context Protocol
-
-To use your server, add this JSON configuration to your MCP Client:
+Create a JSON configuration file (`mcp-config.json`):
 
 ```json
 {
-  "mcpServers": {
-    "your-server": {
-      "command": ".build/debug/YourServerExecutable",
-      "args": []
+    "mcpServers": {
+        "weather-server": {
+            "command": "./weather-server",
+            "args": [],
+            "disabled": false,
+            "timeout": 60000
+        },
+        "calculator-server": {
+            "url": "http://127.0.0.1:8080/mcp",
+            "disabled": false,
+            "timeout": 60000
+        }
     }
-  }
 }
 ```
 
-## Dependencies
+Use the configuration file:
 
-- [swift-sdk](https://github.com/modelcontextprotocol/swift-sdk) - The official Swift SDK for the Model Context Protocol
+```swift
+import AgentKit
+
+let configFile = URL(fileURLWithPath: "./mcp-config.json")
+let agent = try await Agent(mcpConfigFile: configFile)
+
+print("Agent has \(agent.tools.count) tools available")
+agent.tools.forEach { tool in
+    print("- \(tool.toolName)")
+}
+
+try await agent("What is the weather in London and what is 25 * 4?")
+```
+
+### Using MCPServerConfiguration
+
+```swift
+import AgentKit
+
+let config = MCPServerConfiguration()
+config.addServer(
+    name: "weather-server",
+    command: "./weather-server",
+    args: []
+)
+config.addServer(
+    name: "calculator-server", 
+    url: "http://127.0.0.1:8080/mcp"
+)
+
+let agent = try await Agent(mcpConfig: config)
+try await agent("Get weather for Berlin and calculate 100 * 1.2")
+```
+
+### Using MCPClient Directly
+
+```swift
+import AgentKit
+
+// Create individual MCP clients
+let weatherClient = try await MCPClient(
+    command: "./weather-server",
+    args: [],
+    name: "weather-server"
+)
+
+let calculatorClient = try await MCPClient(
+    url: "http://127.0.0.1:8080/mcp",
+    name: "calculator-server"
+)
+
+// Use clients with agent
+let agent = try await Agent(mcpTools: [weatherClient, calculatorClient])
+try await agent("What's the weather in Tokyo and what is 50 divided by 2?")
+```
+
+### Mixed Local and Remote Tools
+
+```swift
+import AgentKit
+
+let agent = try await Agent(
+    tools: [WeatherTool()],  // Local tools
+    mcpConfigFile: URL(fileURLWithPath: "./remote-servers.json")  // Remote tools
+)
+
+try await agent("Compare weather in Paris with currency rates USD to EUR")
+```
+
+## 6. Authentication
+
+AgentKit supports multiple AWS authentication methods:
+
+### Default Credential Chain
+
+```swift
+let agent = try await Agent(auth: .default)
+```
+
+### AWS SSO
+
+```swift
+let agent = try await Agent(auth: .sso("my-sso-profile"))
+// or with default profile
+let agent = try await Agent(auth: .sso(nil))
+```
+
+### Named Profile
+
+```swift
+let agent = try await Agent(auth: .profile("my-aws-profile"))
+```
+
+### Temporary Credentials
+
+```swift
+let agent = try await Agent(auth: .tempCredentials("/path/to/credentials.json"))
+```
+
+The temporary credentials file should contain:
+
+```json
+{
+    "accessKeyId": "AKIA...",
+    "secretAccessKey": "...",
+    "sessionToken": "...",
+    "expiration": "2024-01-01T00:00:00Z"
+}
+```
+
+### Custom Region
+
+```swift
+let agent = try await Agent(
+    auth: .sso("my-profile"),
+    region: .eucentral1
+)
+```
+
+## Advanced Configuration
+
+### Custom Models
+
+```swift
+let agent = try await Agent(
+    model: .claude_haiku_v3,
+    auth: .sso("my-profile")
+)
+```
+
+### System Prompts
+
+```swift
+let agent = try await Agent(
+    systemPrompt: "You are a helpful assistant specialized in weather and finance.",
+    tools: [WeatherTool(), FXRateTool()]
+)
+```
+
+### Custom Logging
+
+```swift
+import Logging
+
+var logger = Logger(label: "MyAgent")
+logger.logLevel = .debug
+
+let agent = try await Agent(
+    tools: [WeatherTool()],
+    logger: logger
+)
+```
+
+## Examples
+
+The `Example` directory contains complete working examples:
+
+- **AgentClient**: Demonstrates various agent usage patterns
+- **MCPServer**: Shows how to create MCP servers with tools
+- **MCPClient**: Illustrates connecting to remote MCP servers
+
+Build and run examples:
+
+```bash
+cd Example
+swift build
+.build/debug/AgentClient
+.build/debug/MCPServer
+.build/debug/MCPClient
+```
 
 ## License
 
-This project is licensed under the terms included in the [MIT LICENSE](LICENSE) file.
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
