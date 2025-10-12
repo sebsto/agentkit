@@ -55,29 +55,23 @@ extension Agent {
         repeat {
             logger.trace("Calling ConverseStream")
 
-            //TODO: encapuslate the retry logic in a generic invokeWithRetry + closure function
-            var reply: ConverseReplyStream!
-            var retryCounter = 1
-            var lastError: Error? = nil
-            var success = false
-            while retryCounter <= maxRetries && !success {
+            let result = try await invokeModelWithRetry(maxRetries: 3, logger: self.logger) {
+                attempt in
                 do {
-                    reply = try await bedrock.converseStream(with: requestBuilder!)
-                    success = true
+                    return try await bedrock.converseStream(with: requestBuilder!)
                 } catch let error as BedrockLibraryError {
-                    lastError = error
-                    retryCounter += 1
                     if case .inputTooLong(let msg) = error {
                         logger.debug(
                             "Input too long, reducing context",
                             metadata: [
-                                "error": "\(msg)", "history_size": "\(getHistory().count)",
-                                "retryCounter": "\(retryCounter-1)",
+                                "error": "\(msg)", 
+                                "history_size": "\(getHistory().count)",
+                                "retryCounter": "\(attempt)",
                             ]
                         )
 
                         // compact the history
-                        let compactedHistory = try await self.conversationManager.reduceContext(history: self.messages)
+                        let compactedHistory = try await self.conversationManager.reduceContext(history: self.getHistory())
                         logger.debug("History compacted", metadata: ["history_size": "\(compactedHistory.count)"])
                         self.setHistory(history: compactedHistory)
 
@@ -85,26 +79,18 @@ extension Agent {
                         requestBuilder = try ConverseRequestBuilder(from: requestBuilder!)
                             .withHistory(getHistory())
                             .withPrompt(prompt)
-                    } else {
-                        logger.debug(
-                            "Retrying converse stream",
-                            metadata: ["error": "\(error)", "retryCounter": "\(retryCounter)"]
-                        )
                     }
-
-                } catch {
-                    logger.debug(
-                        "Retrying converse stream",
-                        metadata: ["error": "\(error)", "retryCounter": "\(retryCounter)"]
-                    )
-                    retryCounter += 1
-                    lastError = error
-                    //TODO: check if the error is retryable
-                    //TODO: apply exponential backoff
+                    // rethrow the error and let the retry happen
+                    throw error
                 }
             }
-            guard retryCounter < maxRetries || success else {
-                throw AgentError.maxRetriesExceeded(maxRetries, lastError)
+
+            guard case let .success(reply) = result else {
+                if case let .failure(error) = result {
+                    throw error
+                } else {
+                    fatalError("Can not happen")
+                }
             }
 
             // read the stream of elements
@@ -204,5 +190,37 @@ extension Agent {
         if let callback {
             callback(.end)
         }
+    }
+
+    private func invokeModelWithRetry<T>(
+        maxRetries: Int,
+        logger: Logger,
+        closure: (Int) async throws -> T
+    ) async throws -> Result<T, Error> {
+
+        var result: T!
+        var retryCounter = 1
+        var lastError: Error? = nil
+        var success = false
+        while retryCounter <= maxRetries && !success {
+            do {
+                result = try await closure(retryCounter)
+                success = true
+            } catch {
+                logger.debug(
+                    "Retrying operation",
+                    metadata: ["error": "\(error)", "retryCounter": "\(retryCounter)"]
+                )
+                retryCounter += 1
+                lastError = error
+                //TODO: check if the error is retryable
+                //TODO: apply exponential backoff
+            }
+        }
+
+        guard retryCounter < maxRetries || success else {
+            return .failure(AgentError.maxRetriesExceeded(maxRetries, lastError))
+        }
+        return .success(result)
     }
 }

@@ -10,23 +10,23 @@ import Foundation
 var logger = Logger(label: "AgentKit-Example")
 logger.logLevel = .debug
 
-func generateLongHistory(messageCount: Int = 1000) -> History {
-    let baseText = String(repeating: "This is a test message to create a long conversation history. ", count: 30)  // ~2KB per message
+// func generateLongHistory(messageCount: Int = 1000) -> History {
+//     let baseText = String(repeating: "This is a test message to create a long conversation history. ", count: 30)  // ~2KB per message
 
-    var history: History = []
-    for i in 0..<messageCount {
-        let userMessage = Message(from: .user, content: [.text("User message \(i): \(baseText)")])
-        let assistantMessage = Message(from: .assistant, content: [.text("Assistant response \(i): \(baseText)")])
-        history.append(userMessage)
-        history.append(assistantMessage)
-    }
-    return history
-}
+//     var history: History = []
+//     for i in 0..<messageCount {
+//         let userMessage = Message(from: .user, content: [.text("User message \(i): \(baseText)")])
+//         let assistantMessage = Message(from: .assistant, content: [.text("Assistant response \(i): \(baseText)")])
+//         history.append(userMessage)
+//         history.append(assistantMessage)
+//     }
+//     return history
+// }
 
 /// Option 1. Just call the agent, it sends its ouput to stdout
 try await Agent(
     "Tell me about Swift 6",
-    messages: generateLongHistory(),
+    // messages: generateLongHistory(),
     auth: .sso("pro"),
     region: .eucentral1,
     logger: logger

@@ -25,10 +25,9 @@ public final class Agent {
     public var messages: History
 
     /// The client API to the Bedrock service
-    private let bedrock: BedrockService
+    package let bedrock: BedrockService
     /// The logger
-    private let logger: Logger
-
+    package let logger: Logger
     /// The conversation manager
     package let conversationManager: ConversationManager
     /// A counter of the tokens we sent to the model
