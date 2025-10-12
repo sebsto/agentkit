@@ -6,15 +6,17 @@
 			"args": [
 				"build",
 				"-c",
-				"debug"
+				"debug",
+				"--target",
+				"AgentClient"
 			],
 			"env": {},
-			"cwd": "/Users/sst/Documents/code/swift/bedrock/AgentKit",
+			"cwd": "/Users/sst/Documents/code/swift/bedrock/AgentKit/Example",
 			"disableTaskQueue": true,
 			"group": "build",
 			"problemMatcher": [],
-			"label": "swift: Build AgentClient",
-			"detail": "swift build -c debug"
+			"label": "swift: Build Debug AgentClient",
+			"detail": "swift build -c debug --target AgentClient"
 		}
 	]
 }

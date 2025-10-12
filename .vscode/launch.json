@@ -5,9 +5,54 @@
             "request": "launch",
             "args": [],
             "cwd": "${workspaceFolder:AgentKit}/Example",
-            "name": "Debug MCPExampleServer",
-            "program": "${workspaceFolder:AgentKit}/Example/.build/debug/MCPExampleServer",
-            "preLaunchTask": "swift: Build Debug MCPExampleServer"
+            "name": "Debug MCPServer",
+            "program": "${workspaceFolder:AgentKit}/Example/.build/debug/MCPServer",
+            "preLaunchTask": "swift: Build Debug MCPServer"
         },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:AgentKit}/Example",
+            "name": "Debug AgentClient",
+            "program": "${workspaceFolder:AgentKit}/Example/.build/debug/AgentClient",
+            "preLaunchTask": "swift: Build Debug AgentClient"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:AgentKit}",
+            "name": "Debug ToolMacroClient",
+            "program": "${workspaceFolder:AgentKit}/.build/debug/ToolMacroClient",
+            "preLaunchTask": "swift: Build Debug ToolMacroClient"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:AgentKit}",
+            "name": "Release ToolMacroClient",
+            "program": "${workspaceFolder:AgentKit}/.build/release/ToolMacroClient",
+            "preLaunchTask": "swift: Build Release ToolMacroClient"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:AgentKit}",
+            "name": "Debug ServerMacroClient",
+            "program": "${workspaceFolder:AgentKit}/.build/debug/ServerMacroClient",
+            "preLaunchTask": "swift: Build Debug ServerMacroClient"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:AgentKit}",
+            "name": "Release ServerMacroClient",
+            "program": "${workspaceFolder:AgentKit}/.build/release/ServerMacroClient",
+            "preLaunchTask": "swift: Build Release ServerMacroClient"
+        }
     ]
 }
