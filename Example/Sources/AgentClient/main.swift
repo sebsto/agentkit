@@ -8,7 +8,7 @@ import Foundation
 #endif
 
 var logger = Logger(label: "AgentKit-Example")
-logger.logLevel = .debug
+logger.logLevel = .info
 
 // func generateLongHistory(messageCount: Int = 1000) -> History {
 //     let baseText = String(repeating: "This is a test message to create a long conversation history. ", count: 30)  // ~2KB per message

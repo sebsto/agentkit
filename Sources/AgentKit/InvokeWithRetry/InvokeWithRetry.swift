@@ -1,7 +1,7 @@
 import Logging
 
 internal func invokeModelWithRetry<T>(
-    strategy: RetryStrategy = SimpleRetry(maxAttempts: 3),
+    strategy: RetryStrategy,
     logger: Logger,
     closure: (Int) async throws -> T
 ) async throws -> Result<T, Error> {
@@ -15,12 +15,19 @@ internal func invokeModelWithRetry<T>(
             lastError = nil
         } catch {
             logger.debug(
-                "Retrying operation",
+                "Error caught in InvokeWithRetry",
                 metadata: ["error": "\(error)", "retryCounter": "\(retryCounter)"]
             )
-            lastError = error
+
             await strategy.delayBeforeRetry(attempt: retryCounter)
-            //TODO: check if the error is retryable
+
+            if strategy.shouldRetryOperation(error: error) {
+                logger.trace("Retrying operation")
+                lastError = error
+            } else {
+                logger.trace("Abond and report the error")
+                return .failure(error)
+            }
         }
         retryCounter += 1
     }

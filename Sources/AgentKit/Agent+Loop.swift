@@ -2,7 +2,6 @@ import BedrockService
 import Logging
 import MCPShared
 
-
 extension Agent {
 
     internal func runLoop(
@@ -55,24 +54,35 @@ extension Agent {
         var lastMessageIsText = false
         repeat {
 
-            let result = try await invokeModelWithRetry(logger: self.logger) {
+            // define a simple retry strategy, with three attemps and we'll not retry authentication errors
+            let nonRetryableError = BedrockLibraryError.authenticationFailed("")
+            let retryStrategy = SimpleRetry(maxAttempts: 3, nonRetryableError: [nonRetryableError])
+
+            // Invoke the model until it passes or fails
+            let result = try await invokeModelWithRetry(strategy: retryStrategy, logger: self.logger) {
                 attempt in
+
                 do {
+
                     logger.debug("Calling ConverseStream")
                     return try await bedrock.converseStream(with: requestBuilder!)
+
                 } catch let error as BedrockLibraryError {
+
                     if case .inputTooLong(let msg) = error {
                         logger.debug(
                             "Input too long, reducing context",
                             metadata: [
-                                "error": "\(msg)", 
+                                "error": "\(msg)",
                                 "history_size": "\(getHistory().count)",
                                 "retryCounter": "\(attempt)",
                             ]
                         )
 
                         // compact the history
-                        let compactedHistory = try await self.conversationManager.reduceContext(history: self.getHistory())
+                        let compactedHistory = try await self.conversationManager.reduceContext(
+                            history: self.getHistory()
+                        )
                         logger.debug("History compacted", metadata: ["history_size": "\(compactedHistory.count)"])
                         self.setHistory(history: compactedHistory)
 

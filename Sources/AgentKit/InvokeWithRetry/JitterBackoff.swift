@@ -23,4 +23,9 @@ struct JitteredBackoffRetry: RetryStrategy {
         let delay = min(exponentialDelay + jitter, maxDelay)
         try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
     }
+
+    func shouldRetryOperation(error: Error) -> Bool {
+        //FIXME:
+        true
+    }
 }
