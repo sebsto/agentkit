@@ -1,5 +1,5 @@
-import Foundation
 import BedrockService
+import Foundation
 
 /// The SlidingWindowConversationManager implements a sliding window strategy that maintains a fixed number of recent messages.
 /// This is the default conversation manager used by the Agent class.
@@ -53,7 +53,7 @@ public struct SlidingWindowConversationManager: ConversationManager {
         let reductionSize = max(1, windowSize / 4)
 
         if reducedHistory.count > reductionSize {
-            let messagesToRemove = min(reductionSize, reducedHistory.count - 1) // Keep at least 1 message
+            let messagesToRemove = min(reductionSize, reducedHistory.count - 1)  // Keep at least 1 message
             reducedHistory = History(Array(reducedHistory.dropFirst(messagesToRemove)))
             _removedMessageCount += messagesToRemove
         }
@@ -67,7 +67,7 @@ public struct SlidingWindowConversationManager: ConversationManager {
     }
 
     public func removedMessageCount() -> Int {
-        return _removedMessageCount
+        _removedMessageCount
     }
 
     /// Removes incomplete message sequences to maintain valid conversation state
@@ -95,14 +95,15 @@ public struct SlidingWindowConversationManager: ConversationManager {
 
     /// Truncates tool results that are too large
     private func truncateToolResults(in history: History) -> History {
-        let maxToolResultLength = 2000 // Configurable limit for tool results
+        let maxToolResultLength = 2000  // Configurable limit for tool results
 
         let truncatedMessages = history.map { message in
             let truncatedContent = message.content.map { content in
                 switch content {
                 case .text(let text):
                     if text.count > maxToolResultLength {
-                        let truncatedText = String(text.prefix(maxToolResultLength)) + "\n\n[Result truncated due to length...]"
+                        let truncatedText =
+                            String(text.prefix(maxToolResultLength)) + "\n\n[Result truncated due to length...]"
                         return Content.text(truncatedText)
                     }
                     return content
@@ -115,7 +116,7 @@ public struct SlidingWindowConversationManager: ConversationManager {
             }
             return Message(from: message.role, content: truncatedContent)
         }
-        
+
         return History(truncatedMessages)
     }
 }

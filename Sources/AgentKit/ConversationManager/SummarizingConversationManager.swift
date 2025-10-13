@@ -1,5 +1,5 @@
-import Foundation
 import BedrockService
+import Foundation
 
 /// The SummarizingConversationManager implements intelligent conversation context management by summarizing
 /// older messages instead of simply discarding them. This approach preserves important information while staying within context limits.
@@ -22,14 +22,14 @@ public struct SummarizingConversationManager: ConversationManager {
 
     /// Default system prompt for summarization
     private static let defaultSummarizationPrompt = """
-    You are summarizing a conversation. Create a concise bullet-point summary that:
-    - Focuses on key topics, decisions, and important information discussed
-    - Preserves technical details, tool usage, and specific data mentioned
-    - Omits conversational elements and focuses on actionable information
-    - Uses third-person format (e.g., "The user asked about...", "The assistant provided...")
+        You are summarizing a conversation. Create a concise bullet-point summary that:
+        - Focuses on key topics, decisions, and important information discussed
+        - Preserves technical details, tool usage, and specific data mentioned
+        - Omits conversational elements and focuses on actionable information
+        - Uses third-person format (e.g., "The user asked about...", "The assistant provided...")
 
-    Format as bullet points without conversational language.
-    """
+        Format as bullet points without conversational language.
+        """
 
     /// Creates a new SummarizingConversationManager
     /// - Parameters:
@@ -49,13 +49,15 @@ public struct SummarizingConversationManager: ConversationManager {
         self.summarizationSystemPrompt = summarizationSystemPrompt
 
         // Ensure only one summarization method is provided
-        assert(summarizationAgent == nil || summarizationSystemPrompt == nil,
-               "Cannot use both summarizationAgent and summarizationSystemPrompt")
+        assert(
+            summarizationAgent == nil || summarizationSystemPrompt == nil,
+            "Cannot use both summarizationAgent and summarizationSystemPrompt"
+        )
     }
 
     public mutating func applyManagement(history: History) async throws -> History {
         // For regular management, we don't need to summarize unless context is exceeded
-        return history
+        history
     }
 
     public mutating func reduceContext(history: History) async throws -> History {
@@ -95,7 +97,7 @@ public struct SummarizingConversationManager: ConversationManager {
     }
 
     public func removedMessageCount() -> Int {
-        return _removedMessageCount
+        _removedMessageCount
     }
 
     /// Ensures tool use and result message pairs aren't broken during summarization
@@ -105,7 +107,8 @@ public struct SummarizingConversationManager: ConversationManager {
 
         // Check if the last message to summarize is a tool use without its result
         if let lastMessage = adjustedToSummarize.last,
-           lastMessage.role == .assistant {
+            lastMessage.role == .assistant
+        {
 
             // Check if this message contains tool use
             let hasToolUse = lastMessage.content.contains { content in
@@ -161,7 +164,7 @@ public struct SummarizingConversationManager: ConversationManager {
 
     /// Extracts text content from message content
     private func extractTextContent(from content: [Content]) -> String {
-        return content.compactMap { content in
+        content.compactMap { content in
             switch content {
             case .text(let text):
                 return text
@@ -185,7 +188,9 @@ public struct SummarizingConversationManager: ConversationManager {
             let content = extractTextContent(from: message.content)
 
             // Extract potential topics (simple keyword extraction)
-            let words = content.lowercased().components(separatedBy: CharacterSet.whitespacesAndNewlines.union(.punctuationCharacters))
+            let words = content.lowercased().components(
+                separatedBy: CharacterSet.whitespacesAndNewlines.union(.punctuationCharacters)
+            )
             let significantWords = words.filter { $0.count > 4 }
             topics.formUnion(Set(significantWords.prefix(3)))
 
@@ -211,7 +216,7 @@ public struct SummarizingConversationManager: ConversationManager {
         for point in keyPoints.prefix(3) {
             summary += "• \(point)\n"
         }
-        
+
         return summary
     }
 }
