@@ -29,15 +29,16 @@ let package = Package(
 
         .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", from: "2.8.0"),
 
-        // .package(url: "https://github.com/modelcontextprotocol/swift-sdk.git", branch: "main"),
-        // https://github.com/modelcontextprotocol/swift-sdk/issues/110
+        // use this fork until this issue is resolved https://github.com/modelcontextprotocol/swift-sdk/issues/110
         .package(url: "https://github.com/stallent/swift-sdk.git", branch: "streamable_server"),
+        // .package(url: "https://github.com/modelcontextprotocol/swift-sdk.git", branch: "main"),
 
         // for MCP Servers
         .package(url: "https://github.com/orlandos-nl/SSEKit.git", from: "1.1.0"),
         .package(url: "https://github.com/hummingbird-project/hummingbird.git", from: "2.0.0"),
 
-        .package(path: "../swift-bedrock-library"),
+        .package(url: "https://github.com/build-on-aws/swift-bedrock-library", from: "1.0.0")
+        //.package(path: "../swift-bedrock-library"),
     ],
     targets: [
         .target(
