@@ -18,7 +18,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Prepare
-      run: apt-get update && apt-get install-y libssl-dev openssl
+      run: apt-get update && apt-get install -y libssl-dev openssl
     - name: Build
       run: swift build -v
     - name: Run tests
