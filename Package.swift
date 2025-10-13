@@ -26,7 +26,6 @@ let package = Package(
     dependencies: [
         // to support macros implementation
         .package(url: "https://github.com/swiftlang/swift-syntax", from: "600.0.1"),
-
         .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", from: "2.8.0"),
 
         // use this fork until this issue is resolved https://github.com/modelcontextprotocol/swift-sdk/issues/110
@@ -48,7 +47,7 @@ let package = Package(
                 .byNameItem(name: "ToolMacro", condition: .when(traits: ["MCPMacros"])),
                 "MCPServerKit", "MCPClientKit",
             ],
-            path: "Sources/AgentKit"
+            // path: "Sources/AgentKit"
         ),
         .target(
             name: "MCPServerKit",
@@ -69,7 +68,7 @@ let package = Package(
                 .byNameItem(name: "ServerMacro", condition: .when(traits: ["MCPMacros"])),
                 "MCPShared",
             ],
-            path: "Sources/MCPServerKit"
+            // path: "Sources/MCPServerKit"
         ),
         .target(
             name: "MCPClientKit",
@@ -77,7 +76,7 @@ let package = Package(
                 .product(name: "MCP", package: "swift-sdk"),
                 "MCPShared",
             ],
-            path: "Sources/MCPClientKit"
+            // path: "Sources/MCPClientKit"
         ),
         .testTarget(
             name: "MCPServerTests",
@@ -107,7 +106,7 @@ let package = Package(
             dependencies: [
                 .product(name: "MCP", package: "swift-sdk")
             ],
-            path: "Sources/MCPShared"
+            // path: "Sources/MCPShared"
         ),
 
         // shared types and protocols for the schema macro system

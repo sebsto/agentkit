@@ -24,26 +24,22 @@ logger.logLevel = .info
 // }
 
 /// Option 1. Just call the agent, it sends its ouput to stdout
-try await Agent(
-    "Who are you?",
-    // messages: generateLongHistory(),
-    auth: .sso("pro"),
-    region: .eucentral1,
-    logger: logger
-)
+// try await Agent(
+//     "Who are you?",
+//     // messages: generateLongHistory(),
+//     auth: .sso("pro"),
+//     region: .eucentral1,
+//     logger: logger
+// )
 
-/// Test with long history
-// let agent = try await Agent(auth: .sso("pro"), region: .eucentral1)
-// agent.messages = generateLongHistory(messageCount: 150) // ~600KB of history
-// try await agent("Summarize our conversation")
+/// Option 2 Create and use the agent in two different steps 
+// Create an agent with default settings
+let agent = try await Agent() 
 
-/// Option 2. Test conversation manager with long history
-// let conversationManager = SlidingWindowConversationManager(windowSize: 20)
-// let agent = try await Agent(auth: .sso("pro"), region: .eucentral1)
-// agent.messages = generateLongHistory(messageCount: 50)
-// try await agent("What can you tell me about our conversation?")
+// Ask the agent a question
+try await agent("Tell me about Swift 6")
 
-/// Option 3.  Invoke `streamAsync(String)` to receive a stream of events
+/// Option 3  Invoke `streamAsync(String)` to receive a stream of events
 // let agent = Agent()
 // for try await event in agent.streamAsync("Tell me about swift 6") {
 //     switch event {

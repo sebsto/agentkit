@@ -20,21 +20,21 @@ let package = Package(
             dependencies: [
                 .product(name: "AgentKit", package: "AgentKit")
             ],
-            path: "Sources/MCPServer"
+            // path: "Sources/MCPServer"
         ),
         .executableTarget(
             name: "MCPClient",
             dependencies: [
                 .product(name: "AgentKit", package: "AgentKit")
             ],
-            path: "Sources/MCPClient"
+            // path: "Sources/MCPClient"
         ),
         .executableTarget(
             name: "AgentClient",
             dependencies: [
                 .product(name: "AgentKit", package: "AgentKit")
             ],
-            path: "Sources/AgentClient"
+            // path: "Sources/AgentClient"
         ),
     ]
 )
