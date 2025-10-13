@@ -1,3 +1,5 @@
+import BedrockService
+
 /// The context refers to the information provided to the agent for understanding and reasoning. This includes:
 /// - User messages
 /// - Agent responses
@@ -22,7 +24,7 @@ public protocol ConversationManager {
     /// - history: the current conversation history
     /// Returns:
     /// - the compacted conversation history
-    func applyManagement(history: History) async throws -> History
+    mutating func applyManagement(history: History) async throws -> History
 
     /// This method is called when the model's context window is exceeded (typically due to token limits).
     /// It implements the specific strategy for reducing the window size when necessary.
@@ -33,7 +35,7 @@ public protocol ConversationManager {
     /// - history: the current conversation history
     /// Returns:
     /// - the compacted conversation history
-    func reduceContext(history: History) async throws -> History
+    mutating func reduceContext(history: History) async throws -> History
 
     /// This attribute is tracked by conversation managers, and utilized by Session Management t
     /// o efficiently load messages from the session storage. The count represent messages provided

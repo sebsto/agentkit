@@ -184,7 +184,8 @@ extension Agent {
             }
 
             // compact the history, according to the defined strategy
-            self.messages = try await self.conversationManager.applyManagement(history: messages)
+            let compactedHistory = try await self.conversationManager.applyManagement(history: self.getHistory())
+            self.setHistory(history: compactedHistory)
 
         } while lastMessageIsText == false
 

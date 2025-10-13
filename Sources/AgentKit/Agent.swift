@@ -22,20 +22,18 @@ public final class Agent {
     /// The list of tools this agent can use to answer questions
     public let tools: [any ToolProtocol]
     /// The history of messages
-    public var messages: History
+    public private(set) var messages: History
 
     /// The client API to the Bedrock service
     package let bedrock: BedrockService
     /// The logger
     package let logger: Logger
     /// The conversation manager
-    package let conversationManager: ConversationManager
+    package var conversationManager: any ConversationManager
     /// A counter of the tokens we sent to the model
     package var inputTokenCount: Int = 0
     /// A counter of the tokens we received from the model
     package var outputTokenCount: Int = 0
-    /// The maximum number of retries in case of Bedrock API error
-    package let maxRetries: Int = 3
 
     /// Creates a new Agent instance with the specified configuration.
     ///
@@ -148,16 +146,16 @@ public final class Agent {
     }
 
     /// Three methods to access and to modify teh conversation Historys
-    public func getHistory() -> History {
+    package func getHistory() -> History {
         self.messages
     }
-    public func setHistory(history: History) {
+    package func setHistory(history: History) {
         self.messages = history
     }
-    public func appendToHistory(_ message: Message) {
+    package func appendToHistory(_ message: Message) {
         self.messages.append(message)
     }
-    public func lastMessageFromHistory() -> Message? {
+    package func lastMessageFromHistory() -> Message? {
         self.messages.last
     }
 }

@@ -93,6 +93,12 @@ let package = Package(
                 .copy("Resources")
             ]
         ),
+        .testTarget(
+            name: "AgentKitTests",
+            dependencies: [
+                .target(name: "AgentKit")
+            ]
+        ),
 
         // shared types and protocols for the MCP Clients and Servers
         .target(
