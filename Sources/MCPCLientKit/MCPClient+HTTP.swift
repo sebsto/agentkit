@@ -1,6 +1,5 @@
 import Logging
 import MCP
-import System
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials

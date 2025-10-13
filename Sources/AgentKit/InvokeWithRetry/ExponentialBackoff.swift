@@ -4,6 +4,12 @@ import FoundationEssentials
 import Foundation
 #endif
 
+#if os(Linux)
+import Glibc
+#else
+import Darwin
+#endif
+
 struct ExponentialBackoffRetry: RetryStrategy {
     let maxAttempts: Int
     let baseDelay: TimeInterval

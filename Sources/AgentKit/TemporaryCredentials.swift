@@ -1,8 +1,9 @@
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
+// DateFormatter is not yet available in FoundationEssentials 
+// #if canImport(FoundationEssentials)
+// import FoundationEssentials
+// #else
 import Foundation
-#endif
+// #endif
 
 struct AWSTemporaryCredentials: Codable {
     let version: Int
@@ -28,8 +29,8 @@ struct AWSTemporaryCredentials: Codable {
 
         // Parse ISO 8601 date format
         let dateString = try container.decode(String.self, forKey: .expiration)
-        let formatter = ISO8601DateFormatter()
-        guard let date = formatter.date(from: dateString) else {
+
+        guard let date = AWSTemporaryCredentials.dateFormatter().date(from: dateString) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .expiration,
                 in: container,
@@ -47,8 +48,16 @@ struct AWSTemporaryCredentials: Codable {
         try container.encode(sessionToken, forKey: .sessionToken)
 
         // Format date as ISO 8601 string
-        let formatter = ISO8601DateFormatter()
+        let formatter = AWSTemporaryCredentials.dateFormatter()
         let dateString = formatter.string(from: expiration)
         try container.encode(dateString, forKey: .expiration)
+    }
+
+    private static func dateFormatter() -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'"
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter
     }
 }

@@ -3,11 +3,15 @@ import MCP
 import MCPShared
 import Synchronization
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
+// We can't use FoundationEssentials on Linux because Process is not defined there.
+// to be removed when we will migrate to swift-process 
+
+// #if canImport(FoundationEssentials)
+// import FoundationEssentials
+// #else
 import Foundation
-#endif
+// #endif
+
 
 /// A MCPClient is teh struct that allows to communicate with a MCP Server
 /// and invoke its tools, get its resources or prompts.

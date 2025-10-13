@@ -1,11 +1,21 @@
 import Logging
 import MCP
-import System
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
+// We can't use FoundationEssentials on Linux because Process is not defined there.
+// to be removed when we will migrate to swift-process
+
+// #if canImport(FoundationEssentials)
+// import FoundationEssentials
+// #else
 import Foundation
+// #endif
+
+#if os(macOS)
+import System
+#elseif os(Linux)
+import SystemPackage
+#else
+#error("Unsupported platform")
 #endif
 
 extension MCPClient {

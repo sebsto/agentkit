@@ -20,7 +20,6 @@ import ServiceLifecycle
 import SSEKit
 import MCP
 import AsyncAlgorithms
-import EventSource
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -86,7 +85,7 @@ struct StreamableMCPController {
             await self.idActor.addRef(serverRef)
         }
 
-        if let streamInfo = try await serverRef.transport.handlePost(data: Data(buffer: body)) {
+        if let streamInfo = try await serverRef.transport.handlePost(data: Data(body.readableBytesView)) {
 
             return .init(
                 status: .ok,
