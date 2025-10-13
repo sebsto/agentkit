@@ -13,9 +13,12 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+    container: swift:6-2-nobble
 
     steps:
     - uses: actions/checkout@v4
+    - name: Prepare
+      run: apt-get update && apt-get install-y libssl-dev openssl
     - name: Build
       run: swift build -v
     - name: Run tests
