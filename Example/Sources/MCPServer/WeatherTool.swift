@@ -6,6 +6,10 @@ import FoundationEssentials
 import Foundation
 #endif
 
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
+
 /// This tool returns current weather and weather forecast for a given city.
 
 @Tool(

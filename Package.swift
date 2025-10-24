@@ -36,7 +36,7 @@ let package = Package(
         .package(url: "https://github.com/orlandos-nl/SSEKit.git", from: "1.1.0"),
         .package(url: "https://github.com/hummingbird-project/hummingbird.git", from: "2.0.0"),
 
-        .package(url: "https://github.com/build-on-aws/swift-bedrock-library", from: "1.0.0")
+        .package(url: "https://github.com/build-on-aws/swift-bedrock-library", branch: "main")
         //.package(path: "../swift-bedrock-library"),
     ],
     targets: [

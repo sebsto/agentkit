@@ -1,0 +1,11 @@
+.build/
+*/.build/
+.git/
+.DS_Store
+*.swp
+*.tmp
+.vscode/
+*/.vscode/
+.github/
+node_modules/
+*/node_modules/

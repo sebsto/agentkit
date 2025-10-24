@@ -3,6 +3,17 @@
   "description": "Default agent configuration",
   "prompt": "",
   "mcpServers": {
+    "docker-example-mcp-server-stdio": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "mcp-examples-server"
+      ],
+      "timeout": 60000,
+      "disabled": false
+    },
     "MCPExample-stdio": {
       "command": "Example/server-stdio",
       "disabled": true,
@@ -10,7 +21,7 @@
     },
     "MCPExample-http": {
       "url": "http://127.0.0.1:8080/mcp",
-      "disabled": false,
+      "disabled": true,
       "timeout": 60000
     }
   },
@@ -21,7 +32,10 @@
     "report_issue",
     "use_aws",
     "@MCPExample-stdio",
-    "@MCPExample-http"
+    "@MCPExample-http",
+    "@docker-example-mcp-server-stdio/weather",
+    "@docker-example-mcp-server-stdio/calculator",
+    "@docker-example-mcp-server-stdio/foreign_exchange_rates"
   ],
   "toolAliases": {},
   "allowedTools": [
@@ -35,7 +49,10 @@
     "@MCPExample-stdio/foreign_exchange_rates",
     "@MCPExample-http/weather",
     "@MCPExample-http/calculator",
-    "@MCPExample-http/foreign_exchange_rates"
+    "@MCPExample-http/foreign_exchange_rates",
+    "@docker-example-mcp-server-stdio/weather",
+    "@docker-example-mcp-server-stdio/calculator",
+    "@docker-example-mcp-server-stdio/foreign_exchange_rates"
   ],
   "toolsSettings": {
     "use_aws": {

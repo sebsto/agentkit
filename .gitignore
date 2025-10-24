@@ -79,4 +79,4 @@ wheels/
 
 # Virtual environments
 .venv
-strands
+python

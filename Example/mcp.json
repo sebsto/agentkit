@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "docker-example-mcp-server-stdio": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "mcp-examples-server"],
+      "disabled": false,
+      "timeout": 60000
+    }
+  }
+}

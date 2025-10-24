@@ -6,6 +6,10 @@ import FoundationEssentials
 import Foundation
 #endif
 
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
+
 // This tool provides foreign exchange rates between currencies using the Hexarate API.
 
 @SchemaDefinition

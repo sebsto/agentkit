@@ -65,11 +65,6 @@ extension Agent {
             throw CredentialsError.invalidData("Could not read data from file: \(path)")
         }
 
-        logger.info(
-            "Using temporary credentials file",
-            metadata: ["path": .string(path)]
-        )
-
         // Decode JSON into AWSTemporaryCredentials
         let credentials: AWSTemporaryCredentials
         do {

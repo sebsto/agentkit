@@ -6,6 +6,10 @@ import FoundationEssentials
 import Foundation
 #endif
 
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
+
 @Tool(
     name: "weather",
     description: "Get detailled weather information for a city."

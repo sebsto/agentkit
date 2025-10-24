@@ -29,4 +29,7 @@ clean:
 	rm -rf .build
 format:
 	swift format format --parallel --recursive --in-place ./Package.swift Examples/ Sources/ Tests/
-
+docker-build:
+	docker build -t mcp-examples-server -f Dockerfile ..
+docker-run:
+	docker run -it --rm mcp-examples-server
