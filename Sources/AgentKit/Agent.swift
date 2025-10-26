@@ -51,6 +51,8 @@ public final class Agent {
     ///   - mcpTools: The remote MCP tools this agent can use. Defaults to empty array.
     ///   - mcpConfig: An MCPServerConfiguration object. Defaults to nil
     ///   - mcpConfigFile: An URL of an mcp.json file with the list of MCP servers. Defaults to nil.
+    ///   - ragSystem: a RAG configuration that this agent will use before querying the model.
+    ///   - conversationManager: The converstaion manager to use. Defaults to NullConversationManager.
     ///   - auth: The authentication method. Defaults to default credential chain.
     ///   - region: The AWS region to use. Defaults to us-east-1.
     ///   - logger: Optional custom logger. If nil, creates a default logger.
@@ -66,6 +68,7 @@ public final class Agent {
         mcpTools: [MCPClient] = [],
         mcpConfig: MCPServerConfiguration? = nil,
         mcpConfigFile: URL? = nil,
+        ragSystem: RAG? = nil,
         conversationManager: any ConversationManager = NullConversationManager(),
         auth: AuthenticationMethod = .default,
         region: Region = .useast1,
@@ -114,6 +117,7 @@ public final class Agent {
                 bedrock: bedrock,
                 model: model,
                 tools: tools,
+                ragSystem: ragSystem,
                 logger: self.logger,
                 callback: callback
             )
@@ -140,12 +144,13 @@ public final class Agent {
             bedrock: self.bedrock,
             model: self.model,
             tools: self.tools,
+            ragSystem: nil,
             logger: self.logger,
             callback: callback
         )
     }
 
-    /// Three methods to access and to modify teh conversation Historys
+    /// Three methods to access and to modify the conversation Histories
     package func getHistory() -> History {
         self.messages
     }
