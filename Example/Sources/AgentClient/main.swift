@@ -26,18 +26,28 @@ logger.logLevel = .info
 /// Option 1. Just call the agent, it sends its ouput to stdout
 // try await Agent(
 //     "Who are you?",
-//     // messages: generateLongHistory(),
 //     auth: .sso("pro"),
 //     region: .eucentral1,
 //     logger: logger
 // )
 
+
+// Option - Use a RAG System
+try await Agent(
+    "When writing a blog post for the AWS News blog, should I write open source or open-source?",
+    model: .nova_micro,
+    // ragSystem: .bedrockKnowledgeBase("EQ13XRVPLE"),
+    auth: .sso("pro"),
+    region: .uswest2,
+    logger: logger
+)
+
 /// Option 2 Create and use the agent in two different steps 
 // Create an agent with default settings
-let agent = try await Agent() 
+// let agent = try await Agent() 
 
 // Ask the agent a question
-try await agent("Tell me about Swift 6")
+// try await agent("Tell me about Swift 6")
 
 /// Option 3  Invoke `streamAsync(String)` to receive a stream of events
 // let agent = Agent()

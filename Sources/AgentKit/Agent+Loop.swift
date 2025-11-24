@@ -10,6 +10,7 @@ extension Agent {
         bedrock: BedrockService,
         model: BedrockModel,
         tools: [any ToolProtocol],
+        ragSystem: RAG?,
         logger: Logger,
         callback: AgentCallbackFunction? = nil
     ) async throws {
@@ -20,13 +21,13 @@ extension Agent {
             throw AgentError.modelNotSupported(model)
         }
 
-        // variables we're going to reuse for the duration of the conversation
+        // variables we're going to reuse for the duration of the loop
         var requestBuilder: ConverseRequestBuilder? = nil
 
         // convert Tools to Bedrock Tools
         let bedrockTools = try tools.bedrockTools()
 
-        // is it our first request ?
+        // is it our first request in this loop ?
         if requestBuilder == nil {
             requestBuilder = try ConverseRequestBuilder(with: model)
                 .withHistory(getHistory())
@@ -36,9 +37,23 @@ extension Agent {
                 requestBuilder = try requestBuilder!.withTools(bedrockTools)
             }
 
-            if !systemPrompt.isEmpty {
-                requestBuilder = try requestBuilder!.withSystemPrompt(systemPrompt)
+            // do we need to make a RAG call ?
+            var ragContext: String? = nil
+            if let ragSystem  {
+                let context = try await self.retrieve(ragSystem: ragSystem, query: prompt, maxResult: 3)
+                ragContext = """
+Relevant context from knowledge base:
+\(context)
+Use this context to inform your responses when relevant.
+"""
             }
+
+            // prepare the system prompt
+            let sysPrompt = "\(systemPrompt)\n\(ragContext ?? "")"
+            if !systemPrompt.isEmpty || ragContext != nil {
+                requestBuilder = try requestBuilder!.withSystemPrompt(sysPrompt)
+            }
+
         } else {
             // if not, we can just add the prompt to the existing request builder
             requestBuilder = try ConverseRequestBuilder(from: requestBuilder!)
