@@ -1,7 +1,7 @@
 import MCP
 
 extension MCPServer {
-    package func startStdioServer() async throws {
+    public func startStdioServer() async throws {
         if let tools, tools.count > 0 {
             await registerTools(tools: tools)
         }
