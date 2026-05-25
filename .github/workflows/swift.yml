@@ -1,25 +1,47 @@
-# This workflow will build a Swift project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-swift
-
 name: Swift
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions: read-all
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-    container: swift:6.2-noble
-
+    container: swift:6.3-amazonlinux2023
     steps:
-    - uses: actions/checkout@v4
-    - name: Prepare
-      run: apt-get update && apt-get install -y libssl-dev openssl
-    - name: Build
-      run: swift build -v
-    - name: Run tests
-      run: swift test -v
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Cache SPM dependencies
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: spm-build-${{ runner.os }}-${{ hashFiles('Package.swift') }}
+          restore-keys: |
+            spm-build-${{ runner.os }}-
+      - name: Build
+        run: swift build
+
+  test:
+    runs-on: ubuntu-latest
+    container: swift:6.3-amazonlinux2023
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Cache SPM dependencies
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: spm-test-${{ runner.os }}-${{ hashFiles('Package.swift') }}
+          restore-keys: |
+            spm-test-${{ runner.os }}-
+      - name: Run tests
+        run: swift test
