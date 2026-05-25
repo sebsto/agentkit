@@ -114,6 +114,8 @@ extension MCPServer {
         )
 
         // Create service group with the HTTP server and MCP controller
+        // Services shut down in reverse order: mcpController disconnects SSE streams first,
+        // then Hummingbird can close connections cleanly
         let serviceGroup = ServiceGroup(
             configuration: .init(
                 services: [app, mcpController],

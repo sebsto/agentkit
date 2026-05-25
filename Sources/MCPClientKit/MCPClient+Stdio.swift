@@ -66,13 +66,4 @@ extension MCPClient {
 
         return process
     }
-
-    public static func disconnectAndTerminateServerProcess(client: Client, process: Process) {
-        if process.isRunning {
-            Task {  // unmanaged task for defer {}
-                await client.disconnect()
-                process.terminate()
-            }
-        }
-    }
 }

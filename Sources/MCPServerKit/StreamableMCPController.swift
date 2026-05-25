@@ -97,8 +97,12 @@ struct StreamableMCPController: Service {
                 headers: responseHeaders,
                 body: .init { writer in
                     let allocator = ByteBufferAllocator()
-                    for try await data in sseStream {
-                        try await writer.write(allocator.buffer(bytes: data))
+                    do {
+                        for try await data in sseStream {
+                            try await writer.write(allocator.buffer(bytes: data))
+                        }
+                    } catch {
+                        // Stream was terminated (e.g., transport disconnected during shutdown)
                     }
                     try await writer.finish(nil)
                 }

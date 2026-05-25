@@ -21,6 +21,9 @@ public final class Agent {
     public let systemPrompt: String
     /// The list of tools this agent can use to answer questions
     public let tools: [any ToolProtocol]
+    /// Retains MCP client connections for the lifetime of the agent.
+    /// Cleanup happens automatically via MCPClient.deinit when the agent is deallocated.
+    private let mcpClients: [MCPClient]
     /// The history of messages
     public private(set) var messages: History
 
@@ -94,13 +97,14 @@ public final class Agent {
         }
 
         // create our bag of tools by combining the local and remote tools
-        let remoteTools = try await Agent.collectTools(
+        let (remoteTools, clients) = try await Agent.collectTools(
             mcpTools: mcpTools,
             mcpConfig: mcpConfig,
             mcpConfigFile: mcpConfigFile,
             logger: self.logger
         )
         self.tools = localTools + remoteTools
+        self.mcpClients = clients
 
         let bedrockAuth = try Agent.makeBedrockAuth(auth: auth, logger: self.logger)
 

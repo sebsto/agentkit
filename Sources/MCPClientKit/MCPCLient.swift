@@ -58,9 +58,17 @@ public actor MCPClient: Sendable {
         _tools = Mutex(tools)
     }
 
+    // Cleanly disconnect from the MCP server on deallocation.
+    // For HTTP transports, this sends a DELETE request to terminate the session.
+    // For stdio transports, this disconnects the client and terminates the subprocess.
     deinit {
-        if let process {
-            MCPClient.disconnectAndTerminateServerProcess(client: client, process: process)
+        let client = self.client
+        let process = self.process
+        Task {
+            await client.disconnect()
+            if let process, process.isRunning {
+                process.terminate()
+            }
         }
     }
 

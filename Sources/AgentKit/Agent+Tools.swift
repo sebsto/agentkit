@@ -71,14 +71,16 @@ extension Agent {
         mcpConfig: MCPServerConfiguration? = nil,
         mcpConfigFile: URL? = nil,
         logger: Logger
-    ) async throws -> [any ToolProtocol] {
+    ) async throws -> (tools: [any ToolProtocol], clients: [MCPClient]) {
 
         // our remote tools (MCP)
         var result: [any ToolProtocol] = []
+        var clients: [MCPClient] = []
 
         // start with the ones we received as MCP clients
         for mcpClient in mcpTools {
             await result.append(contentsOf: mcpClient.asTools())
+            clients.append(mcpClient)
         }
 
         // add the ones we received as a config object
@@ -86,6 +88,7 @@ extension Agent {
             for (key, value) in mcpConfig.mcpServers {
                 let mcpClient = try await MCPClient(with: value, name: key, logger: logger)
                 await result.append(contentsOf: mcpClient.asTools())
+                clients.append(mcpClient)
             }
         }
 
@@ -95,10 +98,11 @@ extension Agent {
             for (key, value) in mcpConfig.mcpServers {
                 let mcpClient = try await MCPClient(with: value, name: key, logger: logger)
                 await result.append(contentsOf: mcpClient.asTools())
+                clients.append(mcpClient)
             }
         }
 
-        return result
+        return (result, clients)
     }
 }
 
