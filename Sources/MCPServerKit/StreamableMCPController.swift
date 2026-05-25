@@ -1,16 +1,6 @@
 #if MCPHTTPSupport
 //
-//  SSEController.swift
-//  HgAIServices
-//
-//  Created by Stephen Tallent on 3/19/25.
-//
-
-//
-//  MainController.swift
-//  HgAIServices
-//
-//  Created by Stephen Tallent on 2/19/25.
+//  StreamableMCPController.swift
 //
 
 import Logging
@@ -51,20 +41,14 @@ struct StreamableMCPController {
         let routes = RouteCollection(context: BasicRequestContext.self)
 
         routes
-            .get("\(path)", use: mcpGet)
-            .post("\(path)", use: mcpPost)
+            .get("\(path)", use: mcpHandler)
+            .post("\(path)", use: mcpHandler)
+            .delete("\(path)", use: mcpHandler)
 
         return routes
     }
 
-    @Sendable func mcpPost(request: Request, context: BasicRequestContext) async throws -> Response {
-        guard let accepts = request.headers[.accept],
-            accepts.contains("application/json") || accepts.contains("text/event-stream")
-        else {
-            context.logger.trace("Missing Accept header with application/json or text/event-stream")
-            return .init(status: .notAcceptable)
-        }
-
+    @Sendable func mcpHandler(request: Request, context: BasicRequestContext) async throws -> Response {
         let body = try await request.body.collect(upTo: .max)
 
         let serverRef: ServerRef
@@ -73,7 +57,7 @@ struct StreamableMCPController {
             serverRef = ref
         } else {
             context.logger.trace("Creating a new MCP server")
-            let transport = StreamableServerTransport()
+            let transport = StatefulHTTPServerTransport()
             try await server.start(transport: transport)
 
             serverRef = .init(
@@ -85,93 +69,95 @@ struct StreamableMCPController {
             await self.idActor.addRef(serverRef)
         }
 
-        if let streamInfo = try await serverRef.transport.handlePost(data: Data(body.readableBytesView)) {
+        // Convert Hummingbird request to MCP HTTPRequest
+        var headers: [String: String] = [:]
+        for field in request.headers {
+            headers[field.name.rawName] = field.value
+        }
 
-            return .init(
-                status: .ok,
-                headers: [
-                    .contentType: jsonResponses ? "application/json" : "text/event-stream",
-                    .mcpSessionId: serverRef.id.uuidString,
-                ],
+        let mcpRequest = MCP.HTTPRequest(
+            method: String(describing: request.method),
+            headers: headers,
+            body: body.readableBytesView.isEmpty ? nil : Data(body.readableBytesView),
+            path: path
+        )
+
+        // Call the transport's public handleRequest method
+        let mcpResponse = await serverRef.transport.handleRequest(mcpRequest)
+
+        // Convert MCP HTTPResponse to Hummingbird Response
+        var responseHeaders = HTTPFields()
+        for (key, value) in mcpResponse.headers {
+            if let name = HTTPField.Name(key) {
+                responseHeaders.append(HTTPField(name: name, value: value))
+            }
+        }
+
+        let status = HTTPResponse.Status(code: mcpResponse.statusCode)
+
+        switch mcpResponse {
+        case .stream(let sseStream, _):
+            return Response(
+                status: status,
+                headers: responseHeaders,
                 body: .init { writer in
                     let allocator = ByteBufferAllocator()
 
-                    try await request.body.consumeWithInboundCloseHandler { requestBody in
-
-                        for try await data in streamInfo.stream {
-
-                            if jsonResponses {
-                                try await writer.write(allocator.buffer(bytes: data))
-                            } else {
-                                try await writer.write(
-                                    ServerSentEvent(data: SSEValue(string: String(data: data, encoding: .utf8) ?? ""))
-                                        .makeBuffer(allocator: allocator)
-                                )
-                            }
-
+                    for try await data in sseStream {
+                        if jsonResponses {
+                            try await writer.write(allocator.buffer(bytes: data))
+                        } else {
+                            // Data from the transport is already SSE-formatted
+                            try await writer.write(allocator.buffer(bytes: data))
                         }
-
-                    } onInboundClosed: {
                     }
 
                     try await writer.finish(nil)
                 }
             )
 
-        } else {
+        case .accepted(_):
             return Response(
-                status: .accepted,
-                headers: HTTPFields(dictionaryLiteral: (.mcpSessionId, serverRef.id.uuidString))
+                status: status,
+                headers: responseHeaders
             )
-        }
 
-    }
+        case .ok(_):
+            return Response(
+                status: status,
+                headers: responseHeaders
+            )
 
-    @Sendable func mcpGet(request: Request, context: BasicRequestContext) async throws -> Response {
-        guard stateful else { return .init(status: .methodNotAllowed) }
+        case .data(let data, _):
+            let allocator = ByteBufferAllocator()
+            return Response(
+                status: status,
+                headers: responseHeaders,
+                body: .init(byteBuffer: allocator.buffer(bytes: data))
+            )
 
-        guard let sessionId = request.headers[.mcpSessionId] else { return .init(status: .badRequest) }
-        guard let serverRef = await self.idActor.ref(sessionId) else { return .init(status: .badRequest) }
-
-        let getStream = try await serverRef.transport.handleGet()
-
-        return .init(
-            status: .ok,
-            headers: [
-                .contentType: "text/event-stream",
-                .mcpSessionId: sessionId,
-            ],
-            body: .init { writer in
-                let allocator = ByteBufferAllocator()
-
-                try await request.body.consumeWithInboundCloseHandler { requestBody in
-
-                    for try await data in getStream {
-                        guard let s = String(data: data, encoding: .utf8) else { continue }
-
-                        try await writer.write(
-                            ServerSentEvent(data: .init(string: s)).makeBuffer(allocator: allocator)
-                        )
-                    }
-
-                } onInboundClosed: {
-                    Task {
-                        await serverRef.transport.endGet()
-                    }
-                }
-
-                try await writer.finish(nil)
+        case .error(_, _, _, _):
+            let allocator = ByteBufferAllocator()
+            if let bodyData = mcpResponse.bodyData {
+                return Response(
+                    status: status,
+                    headers: responseHeaders,
+                    body: .init(byteBuffer: allocator.buffer(bytes: bodyData))
+                )
+            } else {
+                return Response(
+                    status: status,
+                    headers: responseHeaders
+                )
             }
-        )
-
+        }
     }
-
 }
 
 struct ServerRef {
     let id: UUID
     let server: Server
-    let transport: StreamableServerTransport
+    let transport: StatefulHTTPServerTransport
 }
 
 actor ServerIDsActor {
@@ -182,9 +168,6 @@ actor ServerIDsActor {
         servers[ref.id] = ref
         if !started {
             started = true
-            Task {
-                await self.startNotifiers()
-            }
         }
     }
 
@@ -201,33 +184,6 @@ actor ServerIDsActor {
         guard let serverID = UUID(uuidString: sessionID ?? "") else { return nil }
 
         return servers[serverID]
-    }
-
-    // Purely for testing periodic notificatons
-    func startNotifiers() async {
-        //        do {
-        //            let timer = AsyncTimerSequence(interval: .seconds(5), clock: ContinuousClock())
-        //
-        //            for await tick in timer {
-        //                for ref in servers.values {
-        //                    if await ref.transport.isGetConnected() {
-        //                        try await ref.server.notify(GenericNotification.message(.init(level: "info", data: "world \(tick)")))
-        //                    }
-        //
-        //                }
-        //            }
-        //        } catch {
-        //
-        //        }
-    }
-
-}
-
-struct GenericNotification: MCP.Notification, Sendable {
-    static var name: String { "notifications/message" }
-    public struct Parameters: Hashable, Codable, Sendable {
-        let level: String
-        let data: String
     }
 }
 #endif

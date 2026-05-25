@@ -8,13 +8,13 @@ extension MCPServer {
         self.resources.add(resources.resources)
 
         // Register resources/list handler
-        await server.withMethodHandler(ListResources.self) { id, params in
+        await server.withMethodHandler(ListResources.self) { params in
             let mcpResources = resources.asMCPSDKResources()
             return ListResources.Result(resources: mcpResources, nextCursor: nil)
         }
 
         // Register resources/read handler
-        await server.withMethodHandler(ReadResource.self) { id, params in
+        await server.withMethodHandler(ReadResource.self) { params in
             // Find the resource with the requested URI
             guard let resource = resources.find(uri: params.uri) else {
                 throw MCPServerError.resourceNotFound(params.uri)
@@ -25,7 +25,7 @@ extension MCPServer {
         }
 
         // Register resources/templates/list handler
-        await server.withMethodHandler(ListResourceTemplates.self) { _, _ in
+        await server.withMethodHandler(ListResourceTemplates.self) { _ in
             // For now, we don't support resource templates
             ListResourceTemplates.Result(templates: [])
         }

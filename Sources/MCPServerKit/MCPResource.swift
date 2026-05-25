@@ -55,8 +55,7 @@ public struct MCPResource: Hashable, Sendable {
             name: name,
             uri: uri,
             description: description,
-            mimeType: mimeType,
-            metadata: metadata
+            mimeType: mimeType
         )
         self.content = content
     }

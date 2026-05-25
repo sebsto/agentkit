@@ -87,7 +87,7 @@ public actor MCPClient: Sendable {
         )
 
         guard let c = content.first,
-            case let .text(text) = c
+            case let .text(text, _, _) = c
         else {
             logger.error("Tool returned an unsupported response (something else than text)")
             throw MCPClientError.unsupportedToolResponse

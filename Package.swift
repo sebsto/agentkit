@@ -1,11 +1,11 @@
-// swift-tools-version:6.2
+// swift-tools-version:6.3
 import CompilerPluginSupport
 import PackageDescription
 
 let package = Package(
     name: "AgentKit",
     platforms: [
-        .macOS(.v15)
+        .macOS(.v26)
     ],
     products: [
         .executable(name: "ToolMacroClient", targets: ["ToolMacroClient"]),
@@ -25,16 +25,15 @@ let package = Package(
     ],
     dependencies: [
         // to support macros implementation
-        .package(url: "https://github.com/swiftlang/swift-syntax", from: "600.0.1"),
-        .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", from: "2.8.0"),
+        .package(url: "https://github.com/swiftlang/swift-syntax", from: "603.0.0"),
+        .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", from: "2.11.0"),
 
-        // use this fork until this issue is resolved https://github.com/modelcontextprotocol/swift-sdk/issues/110
-        .package(url: "https://github.com/stallent/swift-sdk.git", branch: "streamable_server"),
-        // .package(url: "https://github.com/modelcontextprotocol/swift-sdk.git", branch: "main"),
+        // for MCP Clients and Servers
+        .package(url: "https://github.com/modelcontextprotocol/swift-sdk.git", from: "0.12.1"),
 
         // for MCP Servers
         .package(url: "https://github.com/orlandos-nl/SSEKit.git", from: "1.1.0"),
-        .package(url: "https://github.com/hummingbird-project/hummingbird.git", from: "2.0.0"),
+        .package(url: "https://github.com/hummingbird-project/hummingbird.git", from: "2.24.0"),
 
         .package(url: "https://github.com/build-on-aws/swift-bedrock-library", branch: "main")
         //.package(path: "../swift-bedrock-library"),
