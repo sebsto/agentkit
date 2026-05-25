@@ -32,7 +32,6 @@ let package = Package(
         .package(url: "https://github.com/modelcontextprotocol/swift-sdk.git", from: "0.12.1"),
 
         // for MCP Servers
-        .package(url: "https://github.com/orlandos-nl/SSEKit.git", from: "1.1.0"),
         .package(url: "https://github.com/hummingbird-project/hummingbird.git", from: "2.24.0"),
 
         .package(url: "https://github.com/build-on-aws/swift-bedrock-library", branch: "main")
@@ -56,11 +55,6 @@ let package = Package(
                 .product(
                     name: "Hummingbird",
                     package: "hummingbird",
-                    condition: .when(traits: ["MCPHTTPSupport"])
-                ),
-                .product(
-                    name: "SSEKit",
-                    package: "SSEKit",
                     condition: .when(traits: ["MCPHTTPSupport"])
                 ),
                 .byNameItem(name: "ToolMacro", condition: .when(traits: ["MCPMacros"])),

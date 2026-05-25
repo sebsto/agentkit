@@ -27,14 +27,14 @@ extension MCPServer {
             LogRequestsMiddleware(.trace)
         }
 
-        router.addRoutes(
-            StreamableMCPController(
-                path: "mcp",
-                stateful: false,
-                jsonResponses: true,
-                server: self.server
-            ).endpoints
+        let mcpController = StreamableMCPController(
+            path: "mcp",
+            jsonResponses: true,
+            server: self.server
         )
+        try await mcpController.start()
+
+        router.addRoutes(mcpController.endpoints)
 
         // Create Hummingbird application
         let app = Application(

@@ -50,10 +50,8 @@ public actor MCPClient: Sendable {
                 args: config.args,
                 logger: self.logger
             )
-            break
         case .http(let config):
             try await MCPClient.startHTTPTool(client: client, url: config.url, logger: logger)
-            break
         }
 
         let (tools, _) = try await client.listTools()

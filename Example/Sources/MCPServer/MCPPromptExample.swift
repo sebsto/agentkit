@@ -1,9 +1,9 @@
-import MCP
+import AgentKit
 
 /// Examples of how to use the MCPPrompt API
-public enum MCPPromptExample {
+enum MCPPromptExample {
     /// Example of a code review prompt
-    public static func codeReviewPrompt() throws -> MCPPrompt {
+    static func codeReviewPrompt() throws -> MCPPrompt {
         try MCPPrompt.build { builder in
             builder.name = "code-review"
             builder.description = "A prompt for reviewing code"
@@ -14,7 +14,7 @@ public enum MCPPromptExample {
     }
 
     /// Example of rendering a code review prompt
-    public static func renderCodeReviewPrompt() throws -> String {
+    static func renderCodeReviewPrompt() throws -> String {
         let prompt = try codeReviewPrompt()
         return try prompt.render(with: [
             "code": "print('Hello, World!')",
@@ -23,7 +23,7 @@ public enum MCPPromptExample {
     }
 
     /// Example of a greeting prompt
-    public static func greetingPrompt() throws -> MCPPrompt {
+    static func greetingPrompt() throws -> MCPPrompt {
         try MCPPrompt.build { builder in
             builder.name = "greeting"
             builder.description = "A greeting prompt"
@@ -34,7 +34,7 @@ public enum MCPPromptExample {
     }
 
     /// Example of rendering a greeting prompt
-    public static func renderGreetingPrompt() throws -> String {
+    static func renderGreetingPrompt() throws -> String {
         let prompt = try greetingPrompt()
         return try prompt.render(with: [
             "name": "Alice",
@@ -43,7 +43,7 @@ public enum MCPPromptExample {
     }
 
     /// Example of a prompt with nested braces
-    public static func nestedBracesPrompt() throws -> MCPPrompt {
+    static func nestedBracesPrompt() throws -> MCPPrompt {
         try MCPPrompt.build { builder in
             builder.name = "nested"
             builder.description = "A prompt with nested braces"
@@ -54,7 +54,7 @@ public enum MCPPromptExample {
     }
 
     /// Example of rendering a prompt with nested braces
-    public static func renderNestedBracesPrompt() throws -> String {
+    static func renderNestedBracesPrompt() throws -> String {
         let prompt = try nestedBracesPrompt()
         return try prompt.render(with: [
             "not_a_parameter": "{still_not_a_parameter}",

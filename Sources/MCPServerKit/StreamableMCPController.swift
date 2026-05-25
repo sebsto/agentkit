@@ -1,15 +1,9 @@
 #if MCPHTTPSupport
-//
-//  StreamableMCPController.swift
-//
 
 import Logging
 import Hummingbird
 import HTTPTypes
-import ServiceLifecycle
-import SSEKit
 import MCP
-import AsyncAlgorithms
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -17,24 +11,23 @@ import FoundationEssentials
 import Foundation
 #endif
 
-extension HTTPField.Name {
-    public static var mcpSessionId: Self { HTTPField.Name("Mcp-Session-Id")! }
-}
-
 struct StreamableMCPController {
 
-    private let idActor: ServerIDsActor = ServerIDsActor()
-
     private let path: String
-    private let stateful: Bool
     private let jsonResponses: Bool
     private let server: Server
+    private let transport: StatefulHTTPServerTransport
 
-    init(path: String, stateful: Bool, jsonResponses: Bool, server: Server) {
+    init(path: String, jsonResponses: Bool, server: Server) {
         self.path = path
-        self.stateful = stateful
         self.jsonResponses = jsonResponses
         self.server = server
+        self.transport = StatefulHTTPServerTransport()
+    }
+
+    /// Start the transport (must be called before handling requests)
+    func start() async throws {
+        try await server.start(transport: transport)
     }
 
     var endpoints: RouteCollection<BasicRequestContext> {
@@ -51,24 +44,6 @@ struct StreamableMCPController {
     @Sendable func mcpHandler(request: Request, context: BasicRequestContext) async throws -> Response {
         let body = try await request.body.collect(upTo: .max)
 
-        let serverRef: ServerRef
-        if let ref = await self.idActor.ref(request.headers[.mcpSessionId]) {
-            context.logger.trace("Found an existing MCP server")
-            serverRef = ref
-        } else {
-            context.logger.trace("Creating a new MCP server")
-            let transport = StatefulHTTPServerTransport()
-            try await server.start(transport: transport)
-
-            serverRef = .init(
-                id: UUID(),
-                server: server,
-                transport: transport
-            )
-
-            await self.idActor.addRef(serverRef)
-        }
-
         // Convert Hummingbird request to MCP HTTPRequest
         var headers: [String: String] = [:]
         for field in request.headers {
@@ -82,8 +57,8 @@ struct StreamableMCPController {
             path: path
         )
 
-        // Call the transport's public handleRequest method
-        let mcpResponse = await serverRef.transport.handleRequest(mcpRequest)
+        // Delegate to the transport's public handleRequest method
+        let mcpResponse = await transport.handleRequest(mcpRequest)
 
         // Convert MCP HTTPResponse to Hummingbird Response
         var responseHeaders = HTTPFields()
@@ -102,27 +77,14 @@ struct StreamableMCPController {
                 headers: responseHeaders,
                 body: .init { writer in
                     let allocator = ByteBufferAllocator()
-
                     for try await data in sseStream {
-                        if jsonResponses {
-                            try await writer.write(allocator.buffer(bytes: data))
-                        } else {
-                            // Data from the transport is already SSE-formatted
-                            try await writer.write(allocator.buffer(bytes: data))
-                        }
+                        try await writer.write(allocator.buffer(bytes: data))
                     }
-
                     try await writer.finish(nil)
                 }
             )
 
-        case .accepted(_):
-            return Response(
-                status: status,
-                headers: responseHeaders
-            )
-
-        case .ok(_):
+        case .accepted(_), .ok(_):
             return Response(
                 status: status,
                 headers: responseHeaders
@@ -151,39 +113,6 @@ struct StreamableMCPController {
                 )
             }
         }
-    }
-}
-
-struct ServerRef {
-    let id: UUID
-    let server: Server
-    let transport: StatefulHTTPServerTransport
-}
-
-actor ServerIDsActor {
-    var servers: [UUID: ServerRef] = [:]
-    var started: Bool = false
-
-    func addRef(_ ref: ServerRef) {
-        servers[ref.id] = ref
-        if !started {
-            started = true
-        }
-    }
-
-    func removeRef(_ ref: ServerRef) async throws {
-        await ref.server.stop()
-        servers[ref.id] = nil
-    }
-
-    func ref(_ serverID: UUID) -> ServerRef? {
-        servers[serverID]
-    }
-
-    func ref(_ sessionID: String?) -> ServerRef? {
-        guard let serverID = UUID(uuidString: sessionID ?? "") else { return nil }
-
-        return servers[serverID]
     }
 }
 #endif
