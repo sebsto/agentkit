@@ -62,7 +62,7 @@ public final class Agent {
     public init(
         _ initialPrompt: String = "",
         systemPrompt: String = "",
-        model: BedrockModel = .claude_sonnet_v4,
+        model: BedrockModel = .claude_opus_v4_5,
         messages: History = [],
         tools localTools: [any ToolProtocol] = [],
         mcpTools: [MCPClient] = [],

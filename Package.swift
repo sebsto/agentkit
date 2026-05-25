@@ -34,7 +34,7 @@ let package = Package(
         // for MCP Servers
         .package(url: "https://github.com/hummingbird-project/hummingbird.git", from: "2.24.0"),
 
-        .package(url: "https://github.com/build-on-aws/swift-bedrock-library", branch: "main")
+        .package(url: "https://github.com/build-on-aws/swift-bedrock-library", from: "1.13.0")
         //.package(path: "../swift-bedrock-library"),
     ],
     targets: [
