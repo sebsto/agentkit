@@ -32,7 +32,7 @@ struct Test {
             logger: logger
         ) { server in
             // Start the server
-            try await server.run()
+            try await server.startHttpServer()
         }
     }
 }

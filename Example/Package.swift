@@ -1,10 +1,10 @@
-// swift-tools-version:6.2
+// swift-tools-version:6.3
 import PackageDescription
 
 let package = Package(
     name: "AIAgentExample",
     platforms: [
-        .macOS(.v15)
+        .macOS(.v26)
     ],
     products: [
         .executable(name: "MCPClient", targets: ["MCPClient"]),
