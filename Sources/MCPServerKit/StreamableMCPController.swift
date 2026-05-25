@@ -4,6 +4,7 @@ import Logging
 import Hummingbird
 import HTTPTypes
 import MCP
+import ServiceLifecycle
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials
@@ -11,23 +12,23 @@ import FoundationEssentials
 import Foundation
 #endif
 
-struct StreamableMCPController {
+struct StreamableMCPController: Service {
 
     private let path: String
     private let jsonResponses: Bool
-    private let server: Server
-    private let transport: StatefulHTTPServerTransport
+    private let serverFactory: @Sendable () async -> Server
+    private let sessions: SessionManager = SessionManager()
 
-    init(path: String, jsonResponses: Bool, server: Server) {
+    init(path: String, jsonResponses: Bool, serverFactory: @escaping @Sendable () async -> Server) {
         self.path = path
         self.jsonResponses = jsonResponses
-        self.server = server
-        self.transport = StatefulHTTPServerTransport()
+        self.serverFactory = serverFactory
     }
 
-    /// Start the transport (must be called before handling requests)
-    func start() async throws {
-        try await server.start(transport: transport)
+    /// Service run method — keeps running until cancelled, then disconnects all sessions
+    func run() async throws {
+        try await gracefulShutdown()
+        await sessions.disconnectAll()
     }
 
     var endpoints: RouteCollection<BasicRequestContext> {
@@ -44,6 +45,20 @@ struct StreamableMCPController {
     @Sendable func mcpHandler(request: Request, context: BasicRequestContext) async throws -> Response {
         let body = try await request.body.collect(upTo: .max)
 
+        // Find existing session or create a new one
+        let transport: StatefulHTTPServerTransport
+
+        if let sessionID = request.headers[.mcpSessionId],
+           let existing = await sessions.transport(for: sessionID) {
+            transport = existing
+        } else {
+            // New client — create a fresh Server + Transport pair
+            let newTransport = StatefulHTTPServerTransport()
+            let server = await serverFactory()
+            try await server.start(transport: newTransport)
+            transport = newTransport
+        }
+
         // Convert Hummingbird request to MCP HTTPRequest
         var headers: [String: String] = [:]
         for field in request.headers {
@@ -57,8 +72,13 @@ struct StreamableMCPController {
             path: path
         )
 
-        // Delegate to the transport's public handleRequest method
+        // Delegate to the transport
         let mcpResponse = await transport.handleRequest(mcpRequest)
+
+        // Track the session ID from the response so future requests can find this transport
+        if let newSessionID = mcpResponse.headers["MCP-Session-Id"] {
+            await sessions.associate(sessionID: newSessionID, transport: transport)
+        }
 
         // Convert MCP HTTPResponse to Hummingbird Response
         var responseHeaders = HTTPFields()
@@ -114,5 +134,30 @@ struct StreamableMCPController {
             }
         }
     }
+}
+
+/// Manages the mapping between MCP session IDs and their transports
+actor SessionManager {
+    private var sessionToTransport: [String: StatefulHTTPServerTransport] = [:]
+
+    func transport(for sessionID: String) -> StatefulHTTPServerTransport? {
+        sessionToTransport[sessionID]
+    }
+
+    func associate(sessionID: String, transport: StatefulHTTPServerTransport) {
+        sessionToTransport[sessionID] = transport
+    }
+
+    /// Disconnect all active transports (closes SSE streams so shutdown can complete)
+    func disconnectAll() async {
+        for (_, transport) in sessionToTransport {
+            await transport.disconnect()
+        }
+        sessionToTransport.removeAll()
+    }
+}
+
+extension HTTPField.Name {
+    static var mcpSessionId: Self { HTTPField.Name("Mcp-Session-Id")! }
 }
 #endif
